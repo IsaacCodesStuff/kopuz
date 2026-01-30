@@ -19,7 +19,7 @@ Rusic allows you to scan your local directories for audio files, automatically o
 ## Getting Started
 
 Do a git clone to this project to get the current code.
-`git clone https://github.com/temidaradev/rusic`
+`git clone https://github.com/temidaradev/rusic.git`
 
 Ensure you have Rust and Cargo installed on your system.
 
