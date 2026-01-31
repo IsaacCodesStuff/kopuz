@@ -59,7 +59,7 @@
           '';
         };
 
-        packages.default = pkgs.callPackage ./nix/package.nix { };
+        packages.default = pkgs.callPackage ./nix/package.nix { src = ./.; };
 
         apps.default = {
           type = "app";

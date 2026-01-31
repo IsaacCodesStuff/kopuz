@@ -1,8 +1,7 @@
 { lib
 , rustPlatform
-, fetchFromGitHub
 , pkg-config
-, wrapGAppsHook
+, wrapGAppsHook3
 , makeWrapper
 , webkitgtk_4_1
 , gtk3
@@ -12,6 +11,7 @@
 , xdotool
 , openssl
 , nodejs
+, src
 }:
 
 let
@@ -19,23 +19,16 @@ let
   version = "0.1.1";
 in
 rustPlatform.buildRustPackage {
-  inherit pname version;
-
-  src = fetchFromGitHub {
-    owner = "temidaradev";
-    repo = "rusic";
-    rev = "v${version}";
-    hash = "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="; # Update this
-  };
+  inherit pname version src;
 
   cargoLock = {
-    lockFile = ./Cargo.lock;
+    lockFile = ./../Cargo.lock;
     allowBuiltinFetchGit = true;
   };
 
   nativeBuildInputs = [
     pkg-config
-    wrapGAppsHook
+    wrapGAppsHook3
     makeWrapper
     nodejs
   ];
