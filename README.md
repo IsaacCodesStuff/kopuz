@@ -47,3 +47,7 @@ dx serve --package rusic
 - **Rodio**: Audio playback
 - **Lofty**: Metadata parsing
 - **TailwindCSS**: All the styling
+
+## Star History
+
+[![Star History Chart](https://api.star-history.com/svg?repos=temidaradev/rusic&type=date&legend=top-left)](https://www.star-history.com/#temidaradev/rusic&type=date&legend=top-left)
