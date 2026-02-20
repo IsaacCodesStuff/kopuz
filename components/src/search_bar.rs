@@ -11,7 +11,8 @@ pub fn SearchBar(search_query: Signal<String>) -> Element {
                 placeholder: "Search for artists, albums or tracks...",
                 class: "w-full bg-white/5 border border-white/10 rounded-full py-3 pl-12 pr-4 text-white focus:outline-none focus:border-white/20 transition-colors",
                 value: "{search_query}",
-                oninput: move |evt| search_query.set(evt.value())
+                oninput: move |evt| search_query.set(evt.value()),
+                onkeydown: move |e| e.stop_propagation()
             }
         }
     }

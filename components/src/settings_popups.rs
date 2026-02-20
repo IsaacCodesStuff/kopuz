@@ -26,13 +26,15 @@ pub fn AddServerPopup(
                 input {
                     placeholder: "Server name (optional)",
                     value: "{server_name()}",
-                    oninput: move |e| server_name.set(e.value())
+                    oninput: move |e| server_name.set(e.value()),
+                    onkeydown: move |e| e.stop_propagation()
                 }
 
                 input {
                     placeholder: "http://localhost:8096",
                     value: "{server_url()}",
-                    oninput: move |e| server_url.set(e.value())
+                    oninput: move |e| server_url.set(e.value()),
+                    onkeydown: move |e| e.stop_propagation()
                 }
 
                 div { class: "actions",
@@ -78,6 +80,7 @@ pub fn LoginPopup(
                     placeholder: "Username",
                     value: "{username()}",
                     oninput: move |e| username.set(e.value()),
+                    onkeydown: move |e| e.stop_propagation(),
                     disabled: loading()
                 }
 
@@ -86,6 +89,7 @@ pub fn LoginPopup(
                     placeholder: "Password",
                     value: "{password()}",
                     oninput: move |e| password.set(e.value()),
+                    onkeydown: move |e| e.stop_propagation(),
                     disabled: loading()
                 }
 

@@ -199,7 +199,7 @@ fn App() -> Element {
     let queue = use_signal(Vec::<reader::Track>::new);
     let current_queue_index = use_signal(|| 0usize);
 
-    let ctrl = hooks::use_player_controller(
+    let mut ctrl = hooks::use_player_controller(
         player,
         is_playing,
         queue,
@@ -230,6 +230,15 @@ fn App() -> Element {
         document::Link { rel: "stylesheet", href: "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" }
         div {
             class: "flex flex-col h-screen theme-{config.read().theme}",
+            tabindex: "0",
+            autofocus: true,
+            onkeydown: move |evt| {
+                use dioxus::prelude::Key;
+                let key = evt.key();
+                if key == Key::Character(" ".into()) {
+                    ctrl.toggle();
+                }
+            },
             div {
                 class: "flex flex-1 overflow-hidden",
                 Sidebar {
