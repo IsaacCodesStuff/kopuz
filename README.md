@@ -43,7 +43,7 @@ dx serve --package rusic
 
 ### MacOS Quarantine
 
-Because Apple hates open-source software, they have made it harder for users to install them since they don't explicitly "trust" them. Though the source code can be verified by yours truly. However, inn the meantime, after downloading the ``.dmg`` and dragging the app to your /Applications, use:
+Because Apple hates open-source software, they have made it harder for users to install them since they don't explicitly "trust" them. Though the source code can be verified by yours truly. However, in the meantime, after downloading the ``.dmg`` and dragging the app to your /Applications, use:
 
 ```bash
 xattr -d com.apple.quarantine /Applications/Rusic.app
