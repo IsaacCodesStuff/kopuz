@@ -1,12 +1,10 @@
 # Rusic
+Rusic is a modern, lightweight, music player application built with Rust and the Dioxus framework. It provides a clean and responsive interface for managing and enjoying your local music collection.
 
-Rusic is a modern, lightweight music player application built with Rust and the Dioxus framework. It provides a clean and responsive interface for managing and enjoying your local music collection.
+[![Discord](https://img.shields.io/badge/Discord-5865F2?style=flat&logo=discord&logoColor=white)](https://discord.gg/K6Bmzw2E4M)
+![Rust](https://img.shields.io/badge/Rust-000000?style=flat&logo=rust&logoColor=white)
 
-![Rusic Interface](https://github.com/user-attachments/assets/5dd16aab-9b4e-44e6-afb5-60a36b08fd7c)
-
-Join to the discord server created for Rusic!!
-
-https://discord.gg/K6Bmzw2E4M
+![Rusic](https://github.com/user-attachments/assets/7a69b746-b9b8-47a3-a32b-c6af07deee6c)
 
 ## Overview
 
@@ -17,13 +15,13 @@ Rusic allows you to scan your local directories for audio files, or you jellyfin
 - **Theming**: Includes dynamic theming support to customize the visual appearance.
 - **Native Integration**: Integrates with system media controls (MPRIS) and "Now Playing" displays.
 - **Discord RPC**: Embedded RPC included!!!
-- **Double Option**: Yes you can also use your jellyfin server to listen to your music coming from your server!
+- **Double Option**: Yes, you can also use your jellyfin server to listen to your music coming from your server!
 
 ## Installation
 
 ### Flatpak (Recommended)
 
-Rusic is available on Flathub (coming soon). To install from source manifest:
+Rusic is soon available on Flathub. To install from source manifest:
 
 ```bash
 git clone https://github.com/temidaradev/rusic
@@ -32,22 +30,20 @@ flatpak-builder --user --install --force-clean build-dir com.temidaradev.rusic.j
 flatpak run com.temidaradev.rusic
 ```
 
-or click on the file and open it with app provider like kde discover
+You can also click on the file and open it with an app provider, for example KDE discover
 
 ### Build from Source
 
-
-If you want to hack on it:
-
 ```bash
+git clone https://github.com/temidaradev/rusic
+cd rusic
 npm install
-
 dx serve --package rusic
 ```
 
 ### MacOS Quarantine
 
-Since Apple hates open-source software, they make it harder for users to install them since they don't explicitly "trust" them. The source code can be verified by yours truly though. But in the meantime, after downloading the .dmg and dragging the app to your /Applications, use:
+Because Apple hates open-source software, they have made it harder for users to install them since they don't explicitly "trust" them. Though the source code can be verified by yours truly. However, in the meantime, after downloading the ``.dmg`` and dragging the app to your /Applications, use:
 
 ```bash
 xattr -d com.apple.quarantine /Applications/Rusic.app
@@ -55,14 +51,14 @@ xattr -d com.apple.quarantine /Applications/Rusic.app
 
 ### Scrobbling functionality
 
-Scrobbling functionality is only available through the MusicBrainz (for now). To enable it, you need to provide a valid MusicBrainz token in the configuration file. And the scrobbling is only available for your local musics. I highly recommend using "https://github.com/lyarenei/jellyfin-plugin-listenbrainz" because if you also use other music apps for your jellyfin server, you can scrobble your music from anywhere.
+Scrobbling functionality is only available through MusicBrainz (for now). To enable it, you need to provide a valid MusicBrainz token in the configuration file. The scrobbling also is only available for your local musics. It's highly recommended to use [jellyfin-plugin-listenbrainz](https://github.com/lyarenei/jellyfin-plugin-listenbrainz), because if you also use other music apps for your jellyfin server, you can scrobble your music from anywhere.
 
 ## Tech Stack
 
 - **Dioxus**: UI Framework
-- **Rodio**: Audio playback
+- **Rodio**: Audio playback library
 - **Lofty**: Metadata parsing
-- **TailwindCSS**: All the styling
+- **TailwindCSS**: Styling framework based on CSS
 
 ## Star History
 
