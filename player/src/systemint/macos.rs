@@ -120,14 +120,15 @@ pub fn init() {
         }
 
         std::thread::spawn(|| {
-            let mut counter = 0;
+            let mut counter: u64 = 0;
             loop {
-                std::thread::sleep(std::time::Duration::from_secs(5));
+                std::thread::sleep(std::time::Duration::from_secs(1));
                 counter += 1;
                 // Wake the main run loop so Dioxus polls its tokio tasks.
                 // Without this, the event loop sleeps and use_future stops running.
+                // 1s keeps auto-skip responsive even when the window is backgrounded.
                 wake_run_loop();
-                if counter % 6 == 0 {
+                if counter % 30 == 0 {
                     println!("[macos] Background heartbeat tick: {}", counter);
                 }
             }

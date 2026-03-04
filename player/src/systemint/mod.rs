@@ -2,7 +2,7 @@
 mod macos;
 
 #[cfg(target_os = "macos")]
-pub use macos::{SystemEvent, init, poll_event, update_now_playing, wait_event};
+pub use macos::{SystemEvent, init, poll_event, update_now_playing, wait_event, wake_run_loop};
 
 #[cfg(target_os = "linux")]
 mod linux;

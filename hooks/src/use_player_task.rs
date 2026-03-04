@@ -5,6 +5,14 @@ use discord_presence::Presence;
 use server::jellyfin::JellyfinRemote;
 use std::sync::Arc;
 
+#[inline]
+fn nudge_event_loop() {
+    #[cfg(target_os = "macos")]
+    {
+        player::systemint::wake_run_loop();
+    }
+}
+
 pub fn use_player_task(ctrl: PlayerController) {
     let presence: Option<Arc<Presence>> = use_context();
     let mut config: Signal<AppConfig> = use_context();
@@ -74,7 +82,9 @@ pub fn use_player_task(ctrl: PlayerController) {
 
         async move {
             loop {
-                tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+                tokio::time::sleep(std::time::Duration::from_millis(250)).await;
+
+                nudge_event_loop();
 
                 let is_playing = *ctrl.is_playing.read();
                 let discord_enabled = config.read().discord_presence.unwrap_or(true);
@@ -205,6 +215,7 @@ pub fn use_player_task(ctrl: PlayerController) {
                             }
                         }
                         ctrl.play_next();
+                        nudge_event_loop();
                     }
                 } else if *was_playing.peek() {
                     if let Some(ref p) = presence {
