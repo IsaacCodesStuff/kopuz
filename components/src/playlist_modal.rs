@@ -15,9 +15,17 @@ pub fn PlaylistModal(props: PlaylistModalProps) -> Element {
     let mut new_playlist_name = use_signal(String::new);
     let store = props.playlist_store.read();
     let playlists: Vec<_> = if props.is_jellyfin {
-        store.jellyfin_playlists.iter().map(|p| (p.id.clone(), p.name.clone(), p.tracks.len())).collect()
+        store
+            .jellyfin_playlists
+            .iter()
+            .map(|p| (p.id.clone(), p.name.clone(), p.tracks.len()))
+            .collect()
     } else {
-        store.playlists.iter().map(|p| (p.id.clone(), p.name.clone(), p.tracks.len())).collect()
+        store
+            .playlists
+            .iter()
+            .map(|p| (p.id.clone(), p.name.clone(), p.tracks.len()))
+            .collect()
     };
 
     rsx! {
@@ -25,9 +33,9 @@ pub fn PlaylistModal(props: PlaylistModalProps) -> Element {
             class: "fixed inset-0 bg-black/80 flex items-center justify-center z-50",
             onclick: move |_| props.on_close.call(()),
             div {
-                class: "bg-neutral-900 rounded-xl border border-white/10 w-full max-w-md p-6 shadow-2xl",
+                class: "bg-neutral-900 rounded-xl border border-white/10 w-full max-w-md p-6",
                 onclick: move |e| e.stop_propagation(),
-                h2 { class: "text-xl font-bold text-white mb-4", 
+                h2 { class: "text-xl font-bold text-white mb-4",
                     if props.is_jellyfin { "Add to Jellyfin Playlist" } else { "Add to Playlist" }
                 }
 

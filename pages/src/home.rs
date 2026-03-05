@@ -422,7 +422,7 @@ pub fn Home(
                                 p { class: "text-base md:text-lg text-white/60 mb-8 font-medium line-clamp-1 max-w-md", "By {artist}" }
                                 div { class: "flex items-center gap-4",
                                     button {
-                                        class: "flex items-center gap-3 bg-white text-black px-8 py-3 rounded-full font-bold hover:bg-white/90 hover:scale-105 active:scale-95 transition-all w-fit shadow-xl",
+                                        class: "flex items-center gap-3 bg-white text-black px-8 py-3 rounded-full font-bold hover:bg-white/90 hover:scale-105 active:scale-95 transition-all w-fit",
                                         onclick: {
                                             let id = album_id.clone();
                                             move |_| on_play_album.call(id.clone())
@@ -431,7 +431,7 @@ pub fn Home(
                                         span { class: "text-sm", "Start Listening" }
                                     }
                                     button {
-                                        class: "w-11 h-11 rounded-full bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center text-white hover:bg-white/20 transition-all",
+                                        class: "w-11 h-11 rounded-full bg-white/10 border border-white/20 flex items-center justify-center text-white hover:bg-white/20 transition-all",
                                         i { class: "fa-regular fa-heart" }
                                     }
                                 }
@@ -459,7 +459,7 @@ pub fn Home(
                                 p { class: "text-base md:text-lg text-white/60 mb-8 font-medium line-clamp-1 max-w-md", "By {album.artist}" }
                                 div { class: "flex items-center gap-4",
                                     button {
-                                        class: "flex items-center gap-3 bg-white text-black px-8 py-3 rounded-full font-bold hover:bg-white/90 hover:scale-105 active:scale-95 transition-all w-fit shadow-xl",
+                                        class: "flex items-center gap-3 bg-white text-black px-8 py-3 rounded-full font-bold hover:bg-white/90 hover:scale-105 active:scale-95 transition-all w-fit",
                                         onclick: {
                                             let id = album.id.clone();
                                             move |_| on_play_album.call(id.clone())
@@ -468,7 +468,7 @@ pub fn Home(
                                         span { class: "text-sm", "Start Listening" }
                                     }
                                     button {
-                                        class: "w-11 h-11 rounded-full bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center text-white hover:bg-white/20 transition-all",
+                                        class: "w-11 h-11 rounded-full bg-white/10 border border-white/20 flex items-center justify-center text-white hover:bg-white/20 transition-all",
                                         i { class: "fa-regular fa-heart" }
                                     }
                                 }
@@ -502,7 +502,7 @@ pub fn Home(
                                 div { class: "grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4",
                                     for (album_id, title, artist, cover_url) in jelly_list.iter().skip(1).take(8) {
                                         div {
-                                            class: "flex items-center bg-white/5 hover:bg-white/10 border border-white/5 rounded-2xl cursor-pointer transition-all duration-300 group overflow-hidden hover:shadow-xl hover:shadow-black/20 pr-4",
+                                            class: "flex items-center bg-white/5 hover:bg-white/10 border border-white/5 rounded-2xl cursor-pointer transition-all duration-300 group overflow-hidden pr-4",
                                             onclick: {
                                                 let id = album_id.clone();
                                                 move |_| on_select_album.call(id.clone())
@@ -549,12 +549,12 @@ pub fn Home(
                             h2 { class: "text-2xl font-bold text-white tracking-tight", "Top Artists" }
                             div { class: "flex gap-2",
                                 button {
-                                    class: "w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center text-white transition-all hover:scale-105 backdrop-blur-md",
+                                    class: "w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center text-white transition-all hover:scale-105",
                                     onclick: move |_| scroll_container("jelly-artists-scroll", -1),
                                     i { class: "fa-solid fa-chevron-left text-sm" }
                                 }
                                 button {
-                                    class: "w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center text-white transition-all hover:scale-105 backdrop-blur-md",
+                                    class: "w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center text-white transition-all hover:scale-105",
                                     onclick: move |_| scroll_container("jelly-artists-scroll", 1),
                                     i { class: "fa-solid fa-chevron-right text-sm" }
                                 }
@@ -570,7 +570,7 @@ pub fn Home(
                                         let artist = artist.clone();
                                         move |_| on_search_artist.call(artist.clone())
                                     },
-                                    div { class: "w-32 h-32 md:w-40 md:h-40 rounded-full bg-stone-800/80 mb-4 overflow-hidden shadow-lg group-hover:shadow-indigo-500/20 transition-all duration-500 relative mx-auto",
+                                    div { class: "w-32 h-32 md:w-40 md:h-40 rounded-full bg-stone-800/80 mb-4 overflow-hidden transition-all duration-500 relative mx-auto",
                                         if let Some(url) = cover_url {
                                             img { src: "{url}", class: "w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" }
                                         } else {
@@ -593,12 +593,12 @@ pub fn Home(
                              h2 { class: "text-2xl font-bold text-white tracking-tight", "New Releases" }
                              div { class: "flex gap-2",
                                 button {
-                                    class: "w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center text-white transition-all hover:scale-105 backdrop-blur-md",
+                                    class: "w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center text-white transition-all hover:scale-105",
                                     onclick: move |_| scroll_container("jelly-albums-scroll", -1),
                                     i { class: "fa-solid fa-chevron-left text-sm" }
                                 }
                                 button {
-                                    class: "w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center text-white transition-all hover:scale-105 backdrop-blur-md",
+                                    class: "w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center text-white transition-all hover:scale-105",
                                     onclick: move |_| scroll_container("jelly-albums-scroll", 1),
                                     i { class: "fa-solid fa-chevron-right text-sm" }
                                 }
@@ -614,7 +614,7 @@ pub fn Home(
                                        let id = album_id.clone();
                                        move |_| on_select_album.call(id.clone())
                                    },
-                                   div { class: "aspect-square rounded-2xl bg-stone-800/80 mb-4 overflow-hidden shadow-lg group-hover:shadow-xl transition-all duration-300 relative",
+                                   div { class: "aspect-square rounded-2xl bg-stone-800/80 mb-4 overflow-hidden transition-all duration-300 relative",
                                         if let Some(url) = cover_url {
                                             img { src: "{url}", class: "w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" }
                                         } else {
@@ -624,7 +624,7 @@ pub fn Home(
                                         }
                                         div { class: "absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors duration-300" }
 
-                                        div { class: "absolute right-3 bottom-3 w-10 h-10 bg-white text-black rounded-full shadow-2xl flex items-center justify-center translate-y-4 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-300",
+                                        div { class: "absolute right-3 bottom-3 w-10 h-10 bg-white text-black rounded-full flex items-center justify-center translate-y-4 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-300",
                                             onclick: {
                                                 let id = album_id.clone();
                                                 move |evt| {
@@ -702,12 +702,12 @@ pub fn Home(
                             h2 { class: "text-2xl font-bold text-white tracking-tight", "Top Artists" }
                             div { class: "flex gap-2",
                                 button {
-                                    class: "w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center text-white transition-all backdrop-blur-md",
+                                    class: "w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center text-white transition-all",
                                     onclick: move |_| scroll_container("artists-scroll", -1),
                                     i { class: "fa-solid fa-chevron-left text-sm" }
                                 }
                                 button {
-                                    class: "w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center text-white transition-all backdrop-blur-md",
+                                    class: "w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center text-white transition-all",
                                     onclick: move |_| scroll_container("artists-scroll", 1),
                                     i { class: "fa-solid fa-chevron-right text-sm" }
                                 }
@@ -723,7 +723,7 @@ pub fn Home(
                                         let artist = artist.clone();
                                         move |_| on_search_artist.call(artist.clone())
                                     },
-                                    div { class: "aspect-square rounded-full bg-stone-800/80 mb-4 overflow-hidden shadow-lg transition-all duration-300 relative mx-auto",
+                                    div { class: "aspect-square rounded-full bg-stone-800/80 mb-4 overflow-hidden transition-all duration-300 relative mx-auto",
                                         if let Some(path) = cover_path {
                                             if let Some(url) = utils::format_artwork_url(Some(&path)) {
                                                 img { src: "{url}", class: "w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" }
@@ -748,12 +748,12 @@ pub fn Home(
                              h2 { class: "text-2xl font-bold text-white tracking-tight", "New Releases" }
                              div { class: "flex gap-2",
                                 button {
-                                    class: "w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center text-white transition-all backdrop-blur-md",
+                                    class: "w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center text-white transition-all",
                                     onclick: move |_| scroll_container("albums-scroll", -1),
                                     i { class: "fa-solid fa-chevron-left text-sm" }
                                 }
                                 button {
-                                    class: "w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center text-white transition-all backdrop-blur-md",
+                                    class: "w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center text-white transition-all",
                                     onclick: move |_| scroll_container("albums-scroll", 1),
                                     i { class: "fa-solid fa-chevron-right text-sm" }
                                 }
@@ -769,7 +769,7 @@ pub fn Home(
                                        let id = album.id.clone();
                                        move |_| on_select_album.call(id.clone())
                                    },
-                                   div { class: "aspect-square rounded-2xl bg-stone-800/80 mb-4 overflow-hidden shadow-lg transition-all duration-300 relative",
+                                   div { class: "aspect-square rounded-2xl bg-stone-800/80 mb-4 overflow-hidden transition-all duration-300 relative",
                                         if let Some(url) = utils::format_artwork_url(album.cover_path.as_ref()) {
                                             img { src: "{url}", class: "w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" }
                                         } else {
@@ -779,7 +779,7 @@ pub fn Home(
                                         }
                                         div { class: "absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors duration-300" }
 
-                                        div { class: "absolute right-3 bottom-3 w-10 h-10 bg-white text-black rounded-full shadow-lg flex items-center justify-center translate-y-4 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-300",
+                                        div { class: "absolute right-3 bottom-3 w-10 h-10 bg-white text-black rounded-full flex items-center justify-center translate-y-4 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-300",
                                             onclick: {
                                                 let id = album.id.clone();
                                                 move |evt| {
@@ -807,12 +807,12 @@ pub fn Home(
                          }
                          div { class: "flex gap-2",
                             button {
-                                class: "w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center text-white transition-all backdrop-blur-md",
+                                class: "w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center text-white transition-all",
                                 onclick: move |_| scroll_container("playlists-scroll", -1),
                                 i { class: "fa-solid fa-chevron-left text-sm" }
                             }
                             button {
-                                class: "w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center text-white transition-all backdrop-blur-md",
+                                class: "w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center text-white transition-all",
                                 onclick: move |_| scroll_container("playlists-scroll", 1),
                                 i { class: "fa-solid fa-chevron-right text-sm" }
                             }
@@ -867,11 +867,11 @@ pub fn Home(
                                             let id = id.clone();
                                             move |_| on_select_playlist.call(id.clone())
                                         },
-                                        div { class: "aspect-square rounded-2xl bg-white/5 mb-4 overflow-hidden shadow-lg hover:shadow-indigo-500/10 transition-all duration-500 relative",
+                                        div { class: "aspect-square rounded-2xl bg-white/5 mb-4 overflow-hidden transition-all duration-500 relative",
                                              if let Some(url) = cover_url {
                                                  img { src: "{url}", class: "w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" }
                                              } else {
-                                                 div { class: "w-full h-full flex items-center justify-center bg-gradient-to-br from-indigo-600/20 to-purple-600/20 backdrop-blur-sm group-hover:scale-110 transition-transform duration-700",
+                                                 div { class: "w-full h-full flex items-center justify-center bg-gradient-to-br from-indigo-600/20 to-purple-600/20 group-hover:scale-110 transition-transform duration-700",
                                                      i { class: "fa-solid fa-music text-5xl opacity-40 text-white" }
                                                  }
                                              }

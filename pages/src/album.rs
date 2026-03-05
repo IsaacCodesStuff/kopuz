@@ -281,7 +281,7 @@ pub fn Album(
                                             let id = album_id_val.clone();
                                             move |_| album_id.set(id.clone())
                                         },
-                                        div { class: "aspect-square rounded-lg bg-stone-800 mb-3 overflow-hidden shadow-lg relative",
+                                        div { class: "aspect-square rounded-lg bg-stone-800 mb-3 overflow-hidden relative",
                                             if let Some(url) = &cover_url {
                                                 img { src: "{url}", class: "w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" }
                                             } else {
@@ -309,7 +309,7 @@ pub fn Album(
                                             let id = album.id.clone();
                                             move |_| album_id.set(id.clone())
                                         },
-                                        div { class: "aspect-square rounded-lg bg-stone-800 mb-3 overflow-hidden shadow-lg relative",
+                                        div { class: "aspect-square rounded-lg bg-stone-800 mb-3 overflow-hidden relative",
                                             if let Some(url) = utils::format_artwork_url(album.cover_path.as_ref()) {
                                                 img { src: "{url}", class: "w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" }
                                             } else {
@@ -568,7 +568,7 @@ fn JellyfinAlbumDetails(
 
             div {
                 class: "flex flex-col md:flex-row items-end gap-8 mb-12",
-                div { class: "w-64 h-64 rounded-xl bg-stone-800 shadow-2xl overflow-hidden relative flex-shrink-0",
+                div { class: "w-64 h-64 rounded-xl bg-stone-800 overflow-hidden relative flex-shrink-0",
                     if let Some(url) = &cover_url {
                         img { src: "{url}", class: "w-full h-full object-cover" }
                     } else {
@@ -592,7 +592,7 @@ fn JellyfinAlbumDetails(
                 div { class: "flex items-center gap-4",
                     if !album_tracks().is_empty() {
                         button {
-                            class: "w-14 h-14 rounded-full bg-indigo-500 hover:bg-indigo-400 text-black flex items-center justify-center transition-transform hover:scale-105 shadow-xl",
+                            class: "w-14 h-14 rounded-full bg-indigo-500 hover:bg-indigo-400 text-black flex items-center justify-center transition-transform hover:scale-105",
                             onclick: {
                                 let tracks_for_play: Vec<reader::models::Track> = album_tracks().iter().map(|(t, _)| t.clone()).collect();
                                 move |_| {

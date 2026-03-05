@@ -36,12 +36,12 @@ pub fn Bottombar(
 
     rsx! {
         div {
-            class: "h-24 bg-black/60 backdrop-blur-md border-t border-white/5 px-4 flex items-center justify-between select-none shrink-0",
+            class: "h-24 bg-black/60 border-t border-white/5 px-4 flex items-center justify-between select-none shrink-0",
 
             div {
                 class: "flex items-center gap-4 w-1/4",
                 div {
-                    class: "w-14 h-14 bg-white/5 rounded-md flex-shrink-0 overflow-hidden shadow-lg",
+                    class: "w-14 h-14 bg-white/5 rounded-md flex-shrink-0 overflow-hidden",
                     if current_song_cover_url.read().is_empty() {
                         div {
                             class: "w-full h-full flex items-center justify-center",
@@ -131,7 +131,7 @@ pub fn Bottombar(
                         div {
                             class: "absolute top-0 left-0 h-full bg-white group-hover:bg-green-500 rounded-full transition-colors pointer-events-none",
                             style: "width: {progress_percent}%",
-                            div { class: "absolute -right-1.5 -top-1 w-3 h-3 bg-white rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-opacity" }
+                            div { class: "absolute -right-1.5 -top-1 w-3 h-3 bg-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity" }
                         }
                         input {
                             r#type: "range",
@@ -161,7 +161,7 @@ pub fn Bottombar(
                         div {
                             class: "absolute top-0 left-0 h-full bg-white group-hover/vol:bg-green-500 rounded-full transition-colors pointer-events-none",
                             style: "width: {volume_percent}%",
-                            div { class: "absolute -right-1.5 -top-1 w-3 h-3 bg-white rounded-full shadow-lg opacity-0 group-hover/vol:opacity-100 transition-opacity" }
+                            div { class: "absolute -right-1.5 -top-1 w-3 h-3 bg-white rounded-full opacity-0 group-hover/vol:opacity-100 transition-opacity" }
                         }
                          input {
                             r#type: "range",

@@ -32,7 +32,7 @@ pub fn Showcase(props: ShowcaseProps) -> Element {
          div {
              div {
                  class: "flex flex-col md:flex-row items-end gap-8 mb-12",
-                 div { class: "w-64 h-64 rounded-xl bg-stone-800 shadow-2xl overflow-hidden relative flex-shrink-0",
+                 div { class: "w-64 h-64 rounded-xl bg-stone-800 overflow-hidden relative flex-shrink-0",
                      if let Some(url) = &props.cover_url {
                          img { src: "{url}", class: "w-full h-full object-cover" }
                      } else {
@@ -56,7 +56,7 @@ pub fn Showcase(props: ShowcaseProps) -> Element {
                 div { class: "flex items-center gap-4",
                      if !props.tracks.is_empty() {
                          button {
-                             class: "w-14 h-14 rounded-full bg-indigo-500 hover:bg-indigo-400 text-black flex items-center justify-center transition-transform hover:scale-105 shadow-xl",
+                             class: "w-14 h-14 rounded-full bg-indigo-500 hover:bg-indigo-400 text-black flex items-center justify-center transition-transform hover:scale-105",
                              onclick: move |_| props.on_play.call(0),
                              i { class: "fa-solid fa-play text-xl ml-1" }
                          }

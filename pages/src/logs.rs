@@ -55,7 +55,7 @@ pub fn Logs(library: Signal<Library>, config: Signal<AppConfig>) -> Element {
                         p { class: "text-slate-400 text-sm", "Your most played tracks for the active source." }
                     }
                     div {
-                        div { class: "w-12 h-12 rounded-full flex items-center justify-center bg-white/5 border border-white/10 text-slate-400 shadow-sm",
+                        div { class: "w-12 h-12 rounded-full flex items-center justify-center bg-white/5 border border-white/10 text-slate-400",
                             i { class: "fa-solid fa-chart-simple" }
                         }
                     }
@@ -133,7 +133,7 @@ pub fn Logs(library: Signal<Library>, config: Signal<AppConfig>) -> Element {
                                     }
 
                                     div { class: "flex-1 min-w-0 pr-4 flex items-center",
-                                        div { class: "w-10 h-10 bg-white/5 rounded-md shadow-sm flex items-center justify-center mr-4 shrink-0 text-slate-500 group-hover:text-slate-300 transition-colors overflow-hidden",
+                                        div { class: "w-10 h-10 bg-white/5 rounded-md flex items-center justify-center mr-4 shrink-0 text-slate-500 group-hover:text-slate-300 transition-colors overflow-hidden",
                                             if let Some(url) = cover_url {
                                                 img { src: "{url}", class: "w-full h-full object-cover" }
                                             } else {

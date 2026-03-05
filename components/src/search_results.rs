@@ -92,7 +92,7 @@ pub fn SearchResults(
                                 key: "{album.id}",
                                 class: "p-4 bg-white/5 rounded-xl hover:bg-white/10 transition-colors cursor-pointer group",
                                 div {
-                                    class: "aspect-square rounded-lg bg-black/40 mb-3 overflow-hidden shadow-lg relative",
+                                    class: "aspect-square rounded-lg bg-black/40 mb-3 overflow-hidden relative",
                                     if let Some(url) = cover_url {
                                         img {
                                             src: "{url}",

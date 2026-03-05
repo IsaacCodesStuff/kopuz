@@ -170,7 +170,7 @@ pub fn Artist(
                                             key: "{artist}",
                                             class: "group cursor-pointer flex flex-col items-center",
                                             onclick: move |_| artist_name.set(art.clone()),
-                                            div { class: "aspect-square w-full rounded-full bg-stone-800 mb-4 overflow-hidden shadow-lg relative group-hover:shadow-indigo-500/10 transition-all",
+                                            div { class: "aspect-square w-full rounded-full bg-stone-800 mb-4 overflow-hidden relative transition-all",
                                                 if let Some(url) = cover_url {
                                                     img { src: "{url}", class: "w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" }
                                                 } else {
@@ -197,7 +197,7 @@ pub fn Artist(
                                             key: "{artist}",
                                             class: "group cursor-pointer flex flex-col items-center",
                                             onclick: move |_| artist_name.set(art.clone()),
-                                            div { class: "aspect-square w-full rounded-full bg-stone-800 mb-4 overflow-hidden shadow-lg relative group-hover:shadow-indigo-500/10 transition-all",
+                                            div { class: "aspect-square w-full rounded-full bg-stone-800 mb-4 overflow-hidden relative transition-all",
                                                 if let Some(url) = cover_url {
                                                     img { src: "{url}", class: "w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" }
                                                 } else {

@@ -40,9 +40,9 @@ pub fn SearchGenreDetail(
 
             div { class: "flex items-end gap-6 mb-8",
                  if let Some((_, Some(url))) = genres.iter().find(|(g, _)| g == &genre) {
-                     img { src: "{url}", class: "w-48 h-48 rounded-lg shadow-2xl object-cover" }
+                     img { src: "{url}", class: "w-48 h-48 rounded-lg object-cover" }
                  } else {
-                     div { class: "w-48 h-48 rounded-lg bg-gradient-to-br flex items-center justify-center shadow-2xl",
+                     div { class: "w-48 h-48 rounded-lg bg-gradient-to-br flex items-center justify-center",
                          i { class: "fa-solid fa-music text-6xl text-white/20" }
                      }
                  }

@@ -96,7 +96,7 @@ pub fn Fullscreen(
                 style: "width: 50%; max-width: 520px;",
 
                 div {
-                    class: "rounded-lg overflow-hidden shadow-2xl mb-6",
+                    class: "rounded-lg overflow-hidden mb-6",
                     style: "width: 280px; height: 280px;",
                     if current_song_cover_url.read().is_empty() {
                         div {
@@ -129,7 +129,7 @@ pub fn Fullscreen(
                                 style: "height: 4px; top: 8px; left: 0; width: {progress_percent}%; background: linear-gradient(to right, #5a9a9a, #ffffff);"
                             }
                             div {
-                                class: "absolute bg-white rounded-full shadow-lg pointer-events-none",
+                                class: "absolute bg-white rounded-full pointer-events-none",
                                 style: "width: 12px; height: 12px; top: 4px; left: calc({progress_percent}% - 6px);"
                             }
                             input {
@@ -233,7 +233,7 @@ pub fn Fullscreen(
                             style: "height: 4px; top: 8px; left: 0; width: {volume_percent}%;"
                         }
                         div {
-                            class: "absolute bg-white rounded-full shadow-lg pointer-events-none",
+                            class: "absolute bg-white rounded-full pointer-events-none",
                             style: "width: 12px; height: 12px; top: 4px; left: calc({volume_percent}% - 6px);"
                         }
                         input {
@@ -305,7 +305,7 @@ pub fn Fullscreen(
                                         class: "flex items-center gap-6 px-3 py-3 hover:bg-white/5 cursor-pointer rounded transition-colors group",
                                         onclick: move |_| play_song_at_index(i),
                                         div {
-                                            class: "rounded overflow-hidden bg-black/30 shadow-md mr-6",
+                                            class: "rounded overflow-hidden bg-black/30 mr-6",
                                             style: "width: 42px; height: 42px; flex-shrink: 0;",
                                             if let Some(ref url) = cover_url {
                                                 img { src: "{url}", class: "w-full h-full object-cover" }
@@ -339,7 +339,7 @@ pub fn Fullscreen(
                                         class: "flex items-center gap-6 px-3 py-3 hover:bg-white/5 cursor-pointer rounded transition-colors group",
                                         onclick: move |_| play_song_at_index(i),
                                         div {
-                                            class: "rounded overflow-hidden bg-black/30 shadow-md mr-6",
+                                            class: "rounded overflow-hidden bg-black/30 mr-6",
                                             style: "width: 42px; height: 42px; flex-shrink: 0;",
                                             if let Some(ref url) = cover_url {
                                                 img { src: "{url}", class: "w-full h-full object-cover" }

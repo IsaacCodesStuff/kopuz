@@ -48,7 +48,7 @@ pub fn TrackRow(
 
                 if is_menu_open {
                     div {
-                        class: "absolute right-0 top-full mt-1 w-48 bg-neutral-900 border border-white/10 rounded-lg shadow-xl z-20 py-1",
+                        class: "absolute right-0 top-full mt-1 w-48 bg-neutral-900 border border-white/10 rounded-lg z-20 py-1",
                         onclick: move |evt| evt.stop_propagation(),
                         button {
                             class: "w-full text-left px-4 py-2 text-sm text-white hover:bg-white/10 flex items-center gap-2",
