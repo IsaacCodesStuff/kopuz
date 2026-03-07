@@ -25,13 +25,13 @@ Rusic allows you to scan your local directories for audio files, or you jellyfin
 Run directly without installing:
 
 ```bash
-nix run github:temidaradev/rusic
+nix run github:temidaradev/rusic/nix
 ```
 
 Install to your profile:
 
 ```bash
-nix profile install github:temidaradev/rusic
+nix profile install github:temidaradev/rusic/nix
 ```
 
 Or add to your NixOS flake inputs:
@@ -39,7 +39,7 @@ Or add to your NixOS flake inputs:
 ```nix
 # flake.nix
 {
-  inputs.rusic.url = "github:temidaradev/rusic";
+  inputs.rusic.url = "github:temidaradev/rusic/nix";
 }
 ```
 
