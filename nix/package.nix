@@ -18,7 +18,7 @@
 
 rustPlatform.buildRustPackage {
   pname = "rusic";
-  version = "0.3.2";
+  version = (builtins.fromTOML (builtins.readFile ../rusic/Cargo.toml)).package.version;
 
   inherit src;
 
