@@ -93,18 +93,6 @@ dx serve --package rusic
 
 ### macOS
 
-**Via Nix (recommended):**
-
-```bash
-nix run github:temidaradev/rusic
-```
-
-Or install permanently:
-
-```bash
-nix profile add github:temidaradev/rusic
-```
-
 **Quarantine note:** If you downloaded a `.dmg` instead, macOS may block it. Run once to clear the quarantine flag:
 
 ```bash
