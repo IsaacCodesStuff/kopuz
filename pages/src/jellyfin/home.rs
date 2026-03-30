@@ -3,7 +3,7 @@ use dioxus::prelude::*;
 use rand::seq::SliceRandom;
 use rand::thread_rng;
 use reader::{FavoritesStore, Library, PlaylistStore};
-use server::jellyfin::JellyfinRemote;
+use server::jellyfin::JellyfinClient;
 
 #[component]
 pub fn JellyfinHome(
@@ -24,7 +24,7 @@ pub fn JellyfinHome(
             let conf = config.read();
             if let Some(server) = &conf.server {
                 if let (Some(token), Some(user_id)) = (&server.access_token, &server.user_id) {
-                    let remote = JellyfinRemote::new(
+                    let remote = JellyfinClient::new(
                         &server.url,
                         Some(token),
                         &conf.device_id,
@@ -414,7 +414,7 @@ pub fn JellyfinHome(
                                                             } else { (None, conf.device_id.clone()) }
                                                         };
                                                         if let Some((url, token, user_id)) = server_config {
-                                                            let remote = JellyfinRemote::new(&url, Some(&token), &device_id, Some(&user_id));
+                                                            let remote = JellyfinClient::new(&url, Some(&token), &device_id, Some(&user_id));
                                                             for id in &track_ids {
                                                                 let result = if new_fav {
                                                                     remote.mark_favorite(id).await

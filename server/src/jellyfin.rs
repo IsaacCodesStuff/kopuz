@@ -44,7 +44,7 @@ pub struct PlaylistCreationResult {
     pub id: String,
 }
 
-pub struct JellyfinRemote {
+pub struct JellyfinClient {
     client: JellyfinSDK,
     http_client: reqwest::Client,
     base_url: String,
@@ -159,7 +159,7 @@ pub struct GenresResponse {
     pub total_record_count: u32,
 }
 
-impl JellyfinRemote {
+impl JellyfinClient {
     pub fn new(
         base_url: &str,
         api_key: Option<&str>,

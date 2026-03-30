@@ -106,7 +106,7 @@ pub fn JellyfinSearch(
                                     if let (Some(token), Some(user_id)) =
                                         (&server.access_token, &server.user_id)
                                     {
-                                        let remote = server::jellyfin::JellyfinRemote::new(
+                                        let remote = server::jellyfin::JellyfinClient::new(
                                             &server.url,
                                             Some(token),
                                             &conf.device_id,
@@ -138,7 +138,7 @@ pub fn JellyfinSearch(
                                     if let (Some(token), Some(user_id)) =
                                         (&server.access_token, &server.user_id)
                                     {
-                                        let remote = server::jellyfin::JellyfinRemote::new(
+                                        let remote = server::jellyfin::JellyfinClient::new(
                                             &server.url,
                                             Some(token),
                                             &conf.device_id,

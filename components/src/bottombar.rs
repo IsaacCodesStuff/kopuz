@@ -148,7 +148,7 @@ pub fn Bottombar(
                                         };
 
                                         if let Some((url, token, user_id)) = server_config {
-                                            let remote = server::jellyfin::JellyfinRemote::new(
+                                            let remote = server::jellyfin::JellyfinClient::new(
                                                 &url,
                                                 Some(&token),
                                                 &device_id,

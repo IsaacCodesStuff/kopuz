@@ -2,7 +2,7 @@ use config::{AppConfig, MusicSource};
 use dioxus::prelude::*;
 use player::player;
 use reader::{Library, PlaylistStore};
-use server::jellyfin::JellyfinRemote;
+use server::jellyfin::JellyfinClient;
 
 use crate::jellyfin::album::{JellyfinAlbum, JellyfinAlbumDetails};
 use crate::local::album::LocalAlbum;
@@ -38,7 +38,7 @@ pub fn Album(
             let conf = config.read();
             if let Some(server) = &conf.server {
                 if let (Some(token), Some(user_id)) = (&server.access_token, &server.user_id) {
-                    let remote = JellyfinRemote::new(
+                    let remote = JellyfinClient::new(
                         &server.url,
                         Some(token),
                         &conf.device_id,

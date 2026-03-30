@@ -1,9 +1,9 @@
 use crate::use_player_controller::PlayerController;
 use config::AppConfig;
 use dioxus::prelude::*;
-use discord_presence::Presence;
 use discord_presence::cover_art;
-use server::jellyfin::JellyfinRemote;
+use discord_presence::Presence;
+use server::jellyfin::JellyfinClient;
 use std::sync::Arc;
 
 #[cfg(target_os = "macos")]
@@ -106,7 +106,7 @@ pub fn use_player_task(ctrl: PlayerController) {
     use_future(move || {
         let mut ctrl = ctrl;
         async move {
-            use player::systemint::{SystemEvent, poll_event};
+            use player::systemint::{poll_event, SystemEvent};
             loop {
                 let mut processed = false;
                 while let Some(event) = poll_event() {
@@ -130,7 +130,7 @@ pub fn use_player_task(ctrl: PlayerController) {
     use_future(move || {
         let mut ctrl = ctrl;
         async move {
-            use player::systemint::{SystemEvent, wait_event};
+            use player::systemint::{wait_event, SystemEvent};
             player::systemint::init();
             println!("[player_task] Starting Windows SMTC event loop");
             loop {
@@ -197,7 +197,7 @@ pub fn use_player_task(ctrl: PlayerController) {
                 };
 
                 if let Some((server, device_id)) = jellyfin_info {
-                    let remote = Arc::new(JellyfinRemote::new(
+                    let remote = Arc::new(JellyfinClient::new(
                         &server.url,
                         server.access_token.as_deref(),
                         &device_id,

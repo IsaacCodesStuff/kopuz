@@ -5,7 +5,7 @@ use config::AppConfig;
 use dioxus::prelude::*;
 use hooks::use_player_controller::PlayerController;
 use reader::{FavoritesStore, Library, PlaylistStore};
-use server::jellyfin::JellyfinRemote;
+use server::jellyfin::JellyfinClient;
 use std::collections::HashSet;
 use std::path::PathBuf;
 
@@ -53,7 +53,7 @@ pub fn JellyfinFavorites(
 
                 if let Some((url, token, user_id)) = server_config {
                     let remote =
-                        JellyfinRemote::new(&url, Some(&token), &device_id, Some(&user_id));
+                        JellyfinClient::new(&url, Some(&token), &device_id, Some(&user_id));
                     if let Ok(items) = remote.get_favorite_items().await {
                         let ids: Vec<String> = items.iter().map(|i| i.id.clone()).collect();
                         let mut store = favorites_store.write();
@@ -201,7 +201,7 @@ pub fn JellyfinFavorites(
                                 let conf = config.peek();
                                 if let Some(server) = &conf.server {
                                     if let (Some(token), Some(user_id)) = (&server.access_token, &server.user_id) {
-                                        let remote = JellyfinRemote::new(
+                                        let remote = JellyfinClient::new(
                                             &server.url,
                                             Some(token),
                                             &conf.device_id,
@@ -237,7 +237,7 @@ pub fn JellyfinFavorites(
                                 let conf = config.peek();
                                 if let Some(server) = &conf.server {
                                     if let (Some(token), Some(user_id)) = (&server.access_token, &server.user_id) {
-                                        let remote = JellyfinRemote::new(
+                                        let remote = JellyfinClient::new(
                                             &server.url,
                                             Some(token),
                                             &conf.device_id,

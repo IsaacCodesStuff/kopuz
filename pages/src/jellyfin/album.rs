@@ -5,7 +5,7 @@ use components::track_row::TrackRow;
 use config::AppConfig;
 use dioxus::prelude::*;
 use reader::{Library, PlaylistStore};
-use server::jellyfin::JellyfinRemote;
+use server::jellyfin::JellyfinClient;
 use std::collections::HashSet;
 use std::path::PathBuf;
 
@@ -329,7 +329,7 @@ pub fn JellyfinAlbumDetails(
                                 let conf = config.peek();
                                 if let Some(server) = &conf.server {
                                     if let (Some(token), Some(user_id)) = (&server.access_token, &server.user_id) {
-                                        let remote = JellyfinRemote::new(
+                                        let remote = JellyfinClient::new(
                                             &server.url,
                                             Some(token),
                                             &conf.device_id,
@@ -365,7 +365,7 @@ pub fn JellyfinAlbumDetails(
                                 let conf = config.peek();
                                 if let Some(server) = &conf.server {
                                     if let (Some(token), Some(user_id)) = (&server.access_token, &server.user_id) {
-                                        let remote = JellyfinRemote::new(
+                                        let remote = JellyfinClient::new(
                                             &server.url,
                                             Some(token),
                                             &conf.device_id,

@@ -67,7 +67,7 @@ pub fn PlaylistDetail(
                         if let (Some(token), Some(user_id)) =
                             (&server.access_token, &server.user_id)
                         {
-                            let remote = server::jellyfin::JellyfinRemote::new(
+                            let remote = server::jellyfin::JellyfinClient::new(
                                 &server.url,
                                 Some(token),
                                 &conf.device_id,
@@ -283,7 +283,7 @@ pub fn PlaylistDetail(
                                         let conf = config.peek();
                                         if let Some(server) = &conf.server {
                                             if let (Some(token), Some(user_id)) = (&server.access_token, &server.user_id) {
-                                                let remote = server::jellyfin::JellyfinRemote::new(
+                                                let remote = server::jellyfin::JellyfinClient::new(
                                                     &server.url,
                                                     Some(token),
                                                     &conf.device_id,
@@ -361,7 +361,7 @@ pub fn PlaylistDetail(
                                     let conf = config.peek();
                                     if let Some(server) = &conf.server {
                                         if let (Some(token), Some(user_id)) = (&server.access_token, &server.user_id) {
-                                            let remote = server::jellyfin::JellyfinRemote::new(
+                                            let remote = server::jellyfin::JellyfinClient::new(
                                                 &server.url,
                                                 Some(token),
                                                 &conf.device_id,
@@ -405,7 +405,7 @@ pub fn PlaylistDetail(
                                     let conf = config.peek();
                                     if let Some(server) = &conf.server {
                                         if let (Some(token), Some(user_id)) = (&server.access_token, &server.user_id) {
-                                            let remote = server::jellyfin::JellyfinRemote::new(
+                                            let remote = server::jellyfin::JellyfinClient::new(
                                                 &server.url,
                                                 Some(token),
                                                 &conf.device_id,

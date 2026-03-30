@@ -5,7 +5,7 @@ use components::settings_items::{
 use components::settings_popups::{AddServerPopup, LoginPopup};
 use config::AppConfig;
 use dioxus::prelude::*;
-use server::jellyfin::JellyfinRemote;
+use server::jellyfin::JellyfinClient;
 
 #[component]
 pub fn Settings(config: Signal<AppConfig>) -> Element {
@@ -63,7 +63,7 @@ pub fn Settings(config: Signal<AppConfig>) -> Element {
             login_error.set(None);
 
             spawn(async move {
-                let mut remote = JellyfinRemote::new(&server_url, None, &device_id, None);
+                let mut remote = JellyfinClient::new(&server_url, None, &device_id, None);
                 let result = remote.login(&user, &pass).await;
 
                 is_loading.set(false);

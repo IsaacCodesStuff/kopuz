@@ -1,7 +1,7 @@
 use config::AppConfig;
 use dioxus::prelude::*;
 use reader::{Library, PlaylistStore};
-use server::jellyfin::JellyfinRemote;
+use server::jellyfin::JellyfinClient;
 
 #[component]
 pub fn JellyfinPlaylists(
@@ -36,7 +36,7 @@ pub fn JellyfinPlaylists(
 
                 if let Some((url, token, user_id)) = server_config {
                     let remote =
-                        JellyfinRemote::new(&url, Some(&token), &device_id, Some(&user_id));
+                        JellyfinClient::new(&url, Some(&token), &device_id, Some(&user_id));
                     if let Ok(playlists) = remote.get_playlists().await {
                         let mut jelly_playlists = Vec::new();
                         for p in playlists {
