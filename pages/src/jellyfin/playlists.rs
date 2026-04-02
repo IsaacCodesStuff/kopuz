@@ -85,20 +85,13 @@ pub fn JellyfinPlaylists(
                                     let conf = config.peek();
                                     if let Some(server) = &conf.server {
                                         let path_str = t.path.to_string_lossy();
-                                        let parts: Vec<&str> = path_str.split(':').collect();
-                                        if parts.len() >= 2 {
-                                            let id = parts[1];
-                                            let mut url = format!(
-                                                "{}/Items/{}/Images/Primary",
-                                                server.url, id
-                                            );
-                                            if let Some(token) = &server.access_token {
-                                                url.push_str(&format!("?api_key={}", token));
-                                            }
-                                            Some(url)
-                                        } else {
-                                            None
-                                        }
+                                        utils::jellyfin_image::jellyfin_image_url_from_path(
+                                            &path_str,
+                                            &server.url,
+                                            server.access_token.as_deref(),
+                                            384,
+                                            80,
+                                        )
                                     } else {
                                         None
                                     }
@@ -120,7 +113,8 @@ pub fn JellyfinPlaylists(
                                     if let Some(url) = cover_url {
                                         img {
                                             src: "{url}",
-                                            class: "w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                                            class: "w-full h-full object-cover",
+                                            decoding: "async"
                                         }
                                     } else {
                                         div {

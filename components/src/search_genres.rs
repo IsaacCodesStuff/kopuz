@@ -24,7 +24,6 @@ pub fn SearchGenres(
                                 img {
                                     src: "{url}",
                                     class: "absolute inset-0 w-full h-full object-cover group-hover:scale-110 transition-transform duration-500 will-change-transform",
-                                    loading: "lazy",
                                     decoding: "async",
                                 }
                                 div { class: "absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" }

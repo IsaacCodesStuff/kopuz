@@ -85,25 +85,13 @@ pub fn JellyfinFavorites(
             .map(|t| {
                 let cover_url = if let Some(ref srv) = server_ref {
                     let path_str = t.path.to_string_lossy();
-                    let parts: Vec<&str> = path_str.split(':').collect();
-                    if parts.len() >= 2 {
-                        let id = parts[1];
-                        let mut url = format!("{}/Items/{}/Images/Primary", srv.url, id);
-                        let mut params = Vec::new();
-                        if parts.len() >= 3 {
-                            params.push(format!("tag={}", parts[2]));
-                        }
-                        if let Some(token) = &srv.access_token {
-                            params.push(format!("api_key={}", token));
-                        }
-                        if !params.is_empty() {
-                            url.push('?');
-                            url.push_str(&params.join("&"));
-                        }
-                        Some(url)
-                    } else {
-                        None
-                    }
+                    utils::jellyfin_image::jellyfin_image_url_from_path(
+                        &path_str,
+                        &srv.url,
+                        srv.access_token.as_deref(),
+                        80,
+                        80,
+                    )
                 } else {
                     None
                 };
