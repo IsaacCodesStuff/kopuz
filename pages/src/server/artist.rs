@@ -359,7 +359,7 @@ pub fn ServerArtist(
         .unwrap_or(MusicService::Jellyfin);
 
     match service {
-        MusicService::Jellyfin | MusicService::Subsonic | MusicService::Custom => rsx! {
+        MusicService::Jellyfin => rsx! {
             JellyfinArtist {
                 library,
                 config,
@@ -369,5 +369,67 @@ pub fn ServerArtist(
                 current_queue_index,
             }
         },
+        MusicService::Subsonic => rsx! {
+            SubsonicArtist {
+                library,
+                config,
+                artist_name,
+                playlist_store,
+                queue,
+                current_queue_index,
+            }
+        },
+        MusicService::Custom => rsx! {
+            CustomArtist {
+                library,
+                config,
+                artist_name,
+                playlist_store,
+                queue,
+                current_queue_index,
+            }
+        },
+    }
+}
+
+#[component]
+pub fn SubsonicArtist(
+    library: Signal<Library>,
+    config: Signal<AppConfig>,
+    artist_name: Signal<String>,
+    playlist_store: Signal<PlaylistStore>,
+    queue: Signal<Vec<reader::models::Track>>,
+    current_queue_index: Signal<usize>,
+) -> Element {
+    rsx! {
+        JellyfinArtist {
+            library,
+            config,
+            artist_name,
+            playlist_store,
+            queue,
+            current_queue_index,
+        }
+    }
+}
+
+#[component]
+pub fn CustomArtist(
+    library: Signal<Library>,
+    config: Signal<AppConfig>,
+    artist_name: Signal<String>,
+    playlist_store: Signal<PlaylistStore>,
+    queue: Signal<Vec<reader::models::Track>>,
+    current_queue_index: Signal<usize>,
+) -> Element {
+    rsx! {
+        JellyfinArtist {
+            library,
+            config,
+            artist_name,
+            playlist_store,
+            queue,
+            current_queue_index,
+        }
     }
 }

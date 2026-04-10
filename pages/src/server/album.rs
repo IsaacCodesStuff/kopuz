@@ -544,7 +544,7 @@ pub fn ServerAlbum(
         .unwrap_or(MusicService::Jellyfin);
 
     match service {
-        MusicService::Jellyfin | MusicService::Subsonic | MusicService::Custom => rsx! {
+        MusicService::Jellyfin => rsx! {
             JellyfinAlbum {
                 library,
                 config,
@@ -556,6 +556,80 @@ pub fn ServerAlbum(
                 pending_album_id_for_playlist,
             }
         },
+        MusicService::Subsonic => rsx! {
+            SubsonicAlbum {
+                library,
+                config,
+                album_id,
+                playlist_store,
+                queue,
+                open_album_menu,
+                show_album_playlist_modal,
+                pending_album_id_for_playlist,
+            }
+        },
+        MusicService::Custom => rsx! {
+            CustomAlbum {
+                library,
+                config,
+                album_id,
+                playlist_store,
+                queue,
+                open_album_menu,
+                show_album_playlist_modal,
+                pending_album_id_for_playlist,
+            }
+        },
+    }
+}
+
+#[component]
+pub fn SubsonicAlbum(
+    library: Signal<Library>,
+    config: Signal<AppConfig>,
+    album_id: Signal<String>,
+    playlist_store: Signal<PlaylistStore>,
+    queue: Signal<Vec<reader::models::Track>>,
+    open_album_menu: Signal<Option<String>>,
+    show_album_playlist_modal: Signal<bool>,
+    pending_album_id_for_playlist: Signal<Option<String>>,
+) -> Element {
+    rsx! {
+        JellyfinAlbum {
+            library,
+            config,
+            album_id,
+            playlist_store,
+            queue,
+            open_album_menu,
+            show_album_playlist_modal,
+            pending_album_id_for_playlist,
+        }
+    }
+}
+
+#[component]
+pub fn CustomAlbum(
+    library: Signal<Library>,
+    config: Signal<AppConfig>,
+    album_id: Signal<String>,
+    playlist_store: Signal<PlaylistStore>,
+    queue: Signal<Vec<reader::models::Track>>,
+    open_album_menu: Signal<Option<String>>,
+    show_album_playlist_modal: Signal<bool>,
+    pending_album_id_for_playlist: Signal<Option<String>>,
+) -> Element {
+    rsx! {
+        JellyfinAlbum {
+            library,
+            config,
+            album_id,
+            playlist_store,
+            queue,
+            open_album_menu,
+            show_album_playlist_modal,
+            pending_album_id_for_playlist,
+        }
     }
 }
 
@@ -574,7 +648,7 @@ pub fn ServerAlbumDetails(
         .unwrap_or(MusicService::Jellyfin);
 
     match service {
-        MusicService::Jellyfin | MusicService::Subsonic | MusicService::Custom => rsx! {
+        MusicService::Jellyfin => rsx! {
             JellyfinAlbumDetails {
                 album_jellyfin_id,
                 library,
@@ -584,5 +658,67 @@ pub fn ServerAlbumDetails(
                 on_close,
             }
         },
+        MusicService::Subsonic => rsx! {
+            SubsonicAlbumDetails {
+                album_jellyfin_id,
+                library,
+                config,
+                playlist_store,
+                queue,
+                on_close,
+            }
+        },
+        MusicService::Custom => rsx! {
+            CustomAlbumDetails {
+                album_jellyfin_id,
+                library,
+                config,
+                playlist_store,
+                queue,
+                on_close,
+            }
+        },
+    }
+}
+
+#[component]
+pub fn SubsonicAlbumDetails(
+    album_jellyfin_id: String,
+    library: Signal<Library>,
+    config: Signal<AppConfig>,
+    playlist_store: Signal<PlaylistStore>,
+    queue: Signal<Vec<reader::models::Track>>,
+    on_close: EventHandler<()>,
+) -> Element {
+    rsx! {
+        JellyfinAlbumDetails {
+            album_jellyfin_id,
+            library,
+            config,
+            playlist_store,
+            queue,
+            on_close,
+        }
+    }
+}
+
+#[component]
+pub fn CustomAlbumDetails(
+    album_jellyfin_id: String,
+    library: Signal<Library>,
+    config: Signal<AppConfig>,
+    playlist_store: Signal<PlaylistStore>,
+    queue: Signal<Vec<reader::models::Track>>,
+    on_close: EventHandler<()>,
+) -> Element {
+    rsx! {
+        JellyfinAlbumDetails {
+            album_jellyfin_id,
+            library,
+            config,
+            playlist_store,
+            queue,
+            on_close,
+        }
     }
 }

@@ -57,8 +57,8 @@ pub fn JellyfinFavorites(
                     }
                 };
 
-                if let Some((service, url, token, user_id)) = server_config {
-                    let ids = match service {
+                let ids = if let Some((service, url, token, user_id)) = server_config {
+                    match service {
                         MusicService::Jellyfin => {
                             let remote =
                                 JellyfinClient::new(&url, Some(&token), &device_id, Some(&user_id));
@@ -72,11 +72,13 @@ pub fn JellyfinFavorites(
                             let remote = SubsonicClient::new(&url, &user_id, &token);
                             remote.get_starred_song_ids().await.unwrap_or_default()
                         }
-                    };
+                    }
+                } else {
+                    Vec::new()
+                };
 
-                    let mut store = favorites_store.write();
-                    store.jellyfin_favorites = ids;
-                }
+                let mut store = favorites_store.write();
+                store.jellyfin_favorites = ids;
                 is_syncing.set(false);
             });
         }

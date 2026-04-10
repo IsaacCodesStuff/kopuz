@@ -161,7 +161,8 @@ impl SubsonicClient {
             http_client,
             base_url: base_url.trim_end_matches('/').to_string(),
             username: username.to_string(),
-            password: crate::provider::resolve_subsonic_secret(password),
+            password: crate::provider::resolve_subsonic_secret(password)
+                .unwrap_or_else(|| "__missing_subsonic_secret__".to_string()),
         }
     }
 
@@ -299,7 +300,11 @@ impl SubsonicClient {
         Ok(url.to_string())
     }
 
-    pub fn cover_art_url(&self, cover_art_id: &str, max_size: Option<u32>) -> Result<String, String> {
+    pub fn cover_art_url(
+        &self,
+        cover_art_id: &str,
+        max_size: Option<u32>,
+    ) -> Result<String, String> {
         let mut url = reqwest::Url::parse(&format!("{}/rest/getCoverArt.view", self.base_url))
             .map_err(|e| format!("Invalid Subsonic base URL '{}': {}", self.base_url, e))?;
         {

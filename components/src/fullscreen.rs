@@ -122,13 +122,19 @@ pub fn Fullscreen(
         let conf = config.read();
 
         let path_str = track.path.to_string_lossy();
-        let is_server_track = path_str.starts_with("jellyfin:")
-            || path_str.starts_with("subsonic:")
-            || path_str.starts_with("custom:");
+        let provider = if path_str.starts_with("jellyfin:") {
+            Some(config::MusicService::Jellyfin)
+        } else if path_str.starts_with("subsonic:") {
+            Some(config::MusicService::Subsonic)
+        } else if path_str.starts_with("custom:") {
+            Some(config::MusicService::Custom)
+        } else {
+            None
+        };
 
-        if is_server_track {
+        if let Some(provider) = provider {
             if let Some(server) = &conf.server {
-                return match server.service {
+                return match provider {
                     config::MusicService::Jellyfin => {
                         utils::jellyfin_image::jellyfin_image_url_from_path(
                             &path_str,

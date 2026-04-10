@@ -175,7 +175,7 @@ pub async fn sync_server_library(
             }
         }
         MusicService::Subsonic | MusicService::Custom => {
-            let data = fetch_subsonic_library(&server_url, &user_id, &token).await?;
+            let data = fetch_subsonic_library(service, &server_url, &user_id, &token).await?;
             let mut lib_write = library.write();
             lib_write.jellyfin_albums = data.albums;
             lib_write.jellyfin_tracks = data.tracks;
@@ -187,11 +187,17 @@ pub async fn sync_server_library(
 }
 
 pub async fn fetch_subsonic_library(
+    service: MusicService,
     server_url: &str,
     username: &str,
     password: &str,
 ) -> Result<SubsonicLibraryData, String> {
     let remote = SubsonicClient::new(server_url, username, password);
+    let provider_prefix = match service {
+        MusicService::Subsonic => "subsonic",
+        MusicService::Custom => "custom",
+        MusicService::Jellyfin => "jellyfin",
+    };
 
     let mut albums_out = Vec::new();
     let mut tracks_out = Vec::new();
@@ -217,9 +223,9 @@ pub async fn fetch_subsonic_library(
                 .map(|url| encode_cover_url_tag(&url));
 
             let album_id_prefixed = if let Some(tag) = &album_cover_tag {
-                format!("jellyfin:{}:{}", album.id, tag)
+                format!("{}:{}:{}", provider_prefix, album.id, tag)
             } else {
-                format!("jellyfin:{}:none", album.id)
+                format!("{}:{}:none", provider_prefix, album.id)
             };
             let album_name = album.name.clone();
             let album_artist = album.artist.clone().unwrap_or_default();
@@ -238,47 +244,49 @@ pub async fn fetch_subsonic_library(
                 cover_path: Some(PathBuf::from(album_id_prefixed.clone())),
             });
 
-            if let Ok(songs) = remote.get_album_songs(&album.id).await {
-                for song in songs {
-                    if !seen_track_ids.insert(song.id.clone()) {
-                        continue;
-                    }
+            let songs = remote.get_album_songs(&album.id).await.map_err(|e| {
+                format!("Failed to fetch songs for album '{}': {}", album.id, e)
+            })?;
 
-                    if let Some(genre) = &song.genre {
-                        if !genre.is_empty() {
-                            genres.insert(genre.clone());
-                        }
-                    }
-
-                    let bitrate_u8 = song.bit_rate.unwrap_or(0).min(255) as u8;
-
-                    let song_cover_tag = song
-                        .cover_art
-                        .as_ref()
-                        .and_then(|cover_art_id| remote.cover_art_url(cover_art_id, Some(512)).ok())
-                        .map(|url| encode_cover_url_tag(&url));
-
-                    let song_path = if let Some(tag) = &song_cover_tag {
-                        format!("jellyfin:{}:{}", song.id, tag)
-                    } else {
-                        format!("jellyfin:{}", song.id)
-                    };
-
-                    tracks_out.push(Track {
-                        path: PathBuf::from(song_path),
-                        album_id: album_id_prefixed.clone(),
-                        title: song.title,
-                        artist: song.artist.unwrap_or_else(|| album_artist.clone()),
-                        album: song.album.unwrap_or_else(|| album_name.clone()),
-                        duration: song.duration.unwrap_or(0),
-                        khz: song.sampling_rate.unwrap_or(0),
-                        bitrate: bitrate_u8,
-                        track_number: song.track,
-                        disc_number: song.disc_number,
-                        musicbrainz_release_id: None,
-                        playlist_item_id: None,
-                    });
+            for song in songs {
+                if !seen_track_ids.insert(song.id.clone()) {
+                    continue;
                 }
+
+                if let Some(genre) = &song.genre {
+                    if !genre.is_empty() {
+                        genres.insert(genre.clone());
+                    }
+                }
+
+                let bitrate_u8 = song.bit_rate.unwrap_or(0).min(255) as u8;
+
+                let song_cover_tag = song
+                    .cover_art
+                    .as_ref()
+                    .and_then(|cover_art_id| remote.cover_art_url(cover_art_id, Some(512)).ok())
+                    .map(|url| encode_cover_url_tag(&url));
+
+                let song_path = if let Some(tag) = &song_cover_tag {
+                    format!("{}:{}:{}", provider_prefix, song.id, tag)
+                } else {
+                    format!("{}:{}:none", provider_prefix, song.id)
+                };
+
+                tracks_out.push(Track {
+                    path: PathBuf::from(song_path),
+                    album_id: album_id_prefixed.clone(),
+                    title: song.title,
+                    artist: song.artist.unwrap_or_else(|| album_artist.clone()),
+                    album: song.album.unwrap_or_else(|| album_name.clone()),
+                    duration: song.duration.unwrap_or(0),
+                    khz: song.sampling_rate.unwrap_or(0),
+                    bitrate: bitrate_u8,
+                    track_number: song.track,
+                    disc_number: song.disc_number,
+                    musicbrainz_release_id: None,
+                    playlist_item_id: None,
+                });
             }
         }
 

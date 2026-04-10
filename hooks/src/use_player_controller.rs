@@ -66,10 +66,15 @@ impl PlayerController {
         let q = self.queue.peek();
         if idx < q.len() {
             let track = q[idx].clone();
-            let is_jellyfin = track.path.to_string_lossy().starts_with("jellyfin:");
+            let path_str = track.path.to_string_lossy().to_string();
+            let scheme = path_str
+                .split(':')
+                .next()
+                .unwrap_or_default()
+                .to_ascii_lowercase();
+            let is_server_item = matches!(scheme.as_str(), "jellyfin" | "subsonic" | "custom");
 
-            if is_jellyfin {
-                let path_str = track.path.to_string_lossy();
+            if is_server_item {
                 let parts: Vec<&str> = path_str.split(':').collect();
                 let id = parts.get(1).unwrap_or(&"").to_string();
 
@@ -98,7 +103,7 @@ impl PlayerController {
                             (stream_url, cover_url)
                         }
                         MusicService::Subsonic | MusicService::Custom => {
-                            let stream_url = if let (Some(password), Some(username)) =
+                            let (stream_url, cover_url) = if let (Some(password), Some(username)) =
                                 (&server.access_token, &server.user_id)
                             {
                                 let remote = ::server::subsonic::SubsonicClient::new(
@@ -106,22 +111,20 @@ impl PlayerController {
                                     username,
                                     password,
                                 );
-                                remote.stream_url(&id).unwrap_or_default()
+                                let stream_url = remote.stream_url(&id).unwrap_or_default();
+                                let cover_url =
+                                    utils::subsonic_image::subsonic_image_url_from_path(
+                                        &path_str,
+                                        &server.url,
+                                        server.access_token.as_deref(),
+                                        800,
+                                        90,
+                                    )
+                                    .or_else(|| remote.cover_art_url(&id, Some(800)).ok())
+                                    .unwrap_or_default();
+                                (stream_url, cover_url)
                             } else {
-                                String::new()
-                            };
-
-                            let cover_url = {
-                                let path_str = track.path.to_string_lossy();
-                                utils::jellyfin_image::track_cover_url_with_album_fallback(
-                                    &path_str,
-                                    &track.album_id,
-                                    &server.url,
-                                    server.access_token.as_deref(),
-                                    800,
-                                    90,
-                                )
-                                .unwrap_or_default()
+                                (String::new(), String::new())
                             };
 
                             (stream_url, cover_url)

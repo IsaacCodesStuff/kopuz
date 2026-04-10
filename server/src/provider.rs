@@ -10,16 +10,23 @@ static SUBSONIC_SESSION_SECRETS: LazyLock<Mutex<HashMap<String, (String, Instant
     LazyLock::new(|| Mutex::new(HashMap::new()));
 const SUBSONIC_SESSION_TTL: Duration = Duration::from_secs(60 * 60 * 24);
 
-pub fn resolve_subsonic_secret(token_or_password: &str) -> String {
+pub fn resolve_subsonic_secret(token_or_password: &str) -> Option<String> {
     if let Ok(mut store) = SUBSONIC_SESSION_SECRETS.lock() {
         if let Some((secret, created_at)) = store.get(token_or_password).cloned() {
             if created_at.elapsed() <= SUBSONIC_SESSION_TTL {
-                return secret;
+                return Some(secret);
             }
             store.remove(token_or_password);
+            return None;
         }
     }
-    token_or_password.to_string()
+
+    // Raw password can be used directly only for non-session-token inputs (e.g. fresh login).
+    if uuid::Uuid::parse_str(token_or_password).is_ok() {
+        None
+    } else {
+        Some(token_or_password.to_string())
+    }
 }
 
 fn store_subsonic_secret(session_token: &str, password: &str) {
