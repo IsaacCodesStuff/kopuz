@@ -49,12 +49,12 @@ pub fn JellyfinPlaylists(
             store_write.jellyfin_playlists.clear();
         }
 
+        let request_id = *fetch_request_id.read() + 1;
+        fetch_request_id.set(request_id);
+
         let Some((service, url, token, user_id, device_id)) = fetch_context else {
             return;
         };
-
-        let request_id = *fetch_request_id.read() + 1;
-        fetch_request_id.set(request_id);
 
         spawn(async move {
             let mut server_playlists = Vec::new();

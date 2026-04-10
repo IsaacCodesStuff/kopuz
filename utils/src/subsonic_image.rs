@@ -1,7 +1,10 @@
 pub fn parse_subsonic_path(path_str: &str) -> Option<(&str, Option<&str>)> {
     let parts: Vec<&str> = path_str.split(':').collect();
     if parts.len() >= 2 {
-        let id = parts[1];
+        let id = parts[1].trim();
+        if id.is_empty() {
+            return None;
+        }
         let tag = if parts.len() >= 3 {
             Some(parts[2])
         } else {
@@ -15,12 +18,12 @@ pub fn parse_subsonic_path(path_str: &str) -> Option<(&str, Option<&str>)> {
 
 pub fn subsonic_image_url_from_path(
     path_str: &str,
-    _server_url: &str,
-    _access_token: Option<&str>,
-    _max_width: u32,
-    _quality: u32,
+    server_url: &str,
+    access_token: Option<&str>,
+    max_width: u32,
+    quality: u32,
 ) -> Option<String> {
-    let (_, tag) = parse_subsonic_path(path_str)?;
+    let (id, tag) = parse_subsonic_path(path_str)?;
     if tag == Some("none") {
         return None;
     }
@@ -31,7 +34,23 @@ pub fn subsonic_image_url_from_path(
         }
     }
 
-    None
+    let mut url = reqwest::Url::parse(&format!(
+        "{}/rest/getCoverArt.view",
+        server_url.trim_end_matches('/')
+    ))
+    .unwrap_or_else(|_| reqwest::Url::parse("http://127.0.0.1/").unwrap());
+
+    {
+        let mut pairs = url.query_pairs_mut();
+        pairs.append_pair("id", id);
+        pairs.append_pair("size", &max_width.to_string());
+        pairs.append_pair("quality", &quality.to_string());
+        if let Some(token) = access_token {
+            pairs.append_pair("access_token", token);
+        }
+    }
+
+    Some(url.to_string())
 }
 
 fn decode_embedded_cover_url(tag: &str) -> Option<String> {
