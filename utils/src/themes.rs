@@ -60,9 +60,17 @@ struct ThemeFile {
 }
 
 pub fn load_themes() -> Vec<Theme> {
-    // TODO: Make this not baked in
-    const JSON: &str = include_str!("../../rusic/assets/themes.json");
-    let file: ThemeFile = serde_json::from_str(JSON).expect("themes.json is malformed");
+    let path = std::env::var("RUSIC_THEMES_PATH")
+        .map(std::path::PathBuf::from)
+        .unwrap_or_else(|_| {
+            std::env::current_exe()
+                .ok()
+                .and_then(|p| p.parent().map(|d| d.join("assets/themes.json")))
+                .unwrap_or_else(|| std::path::PathBuf::from("assets/themes.json"))
+        });
+    let json = std::fs::read_to_string(&path)
+        .unwrap_or_else(|e| panic!("Failed to read themes.json from {}: {e}", path.display()));
+    let file: ThemeFile = serde_json::from_str(&json).expect("themes.json is malformed");
 
     let mut themes = Vec::new();
 
