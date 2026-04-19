@@ -11,7 +11,10 @@ player = { workspace = true }
 tokio = { workspace = true }
 config = { workspace = true }
 rand = { workspace = true }
-discord-presence = { workspace = true }
 reqwest = { workspace = true }
 server = { workspace = true }
 scrobble = { workspace = true }
+web-time = { workspace = true }
+
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+discord-presence = { workspace = true }

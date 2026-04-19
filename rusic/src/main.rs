@@ -2,14 +2,17 @@ use components::{
     bottombar::Bottombar, fullscreen::Fullscreen, rightbar::Rightbar, sidebar::Sidebar,
     titlebar::Titlebar,
 };
+#[cfg(not(target_arch = "wasm32"))]
 use dioxus::desktop::tao::dpi::LogicalSize;
-#[cfg(target_os = "macos")]
+#[cfg(all(not(target_arch = "wasm32"), target_os = "macos"))]
 use dioxus::desktop::tao::platform::macos::WindowBuilderExtMacOS;
 use dioxus::prelude::*;
+#[cfg(not(target_arch = "wasm32"))]
 use discord_presence::Presence;
 use player::player::Player;
 use reader::FavoritesStore;
 use rusic_route::Route;
+#[cfg(not(target_arch = "wasm32"))]
 use std::sync::Arc;
 
 const FAVICON: Asset = asset!("../assets/favicon.ico");
@@ -18,125 +21,130 @@ const THEME_CSS: Asset = asset!("../assets/themes.css");
 const TAILWIND_CSS: Asset = asset!("../assets/tailwind.css");
 const REDUCED_ANIMATIONS_CSS: Asset = asset!("../assets/reduced-animations.css");
 
+#[cfg(not(target_arch = "wasm32"))]
 static PRESENCE: std::sync::OnceLock<Option<Arc<Presence>>> = std::sync::OnceLock::new();
 
 fn main() {
-    let presence: Option<Arc<Presence>> = match Presence::new("1470087339639443658") {
-        Ok(p) => {
-            println!("Discord presence connected!");
-            Some(Arc::new(p))
-        }
-        Err(e) => {
-            eprintln!("Failed to connect to Discord: {e}");
-            None
-        }
-    };
-
-    PRESENCE.set(presence).ok();
-
-    #[cfg(target_os = "macos")]
+    #[cfg(not(target_arch = "wasm32"))]
     {
-        player::systemint::init();
-    }
-
-    let mut window = dioxus::desktop::WindowBuilder::new()
-        .with_title("Rusic")
-        .with_resizable(true)
-        .with_inner_size(LogicalSize::new(1350.0, 800.0));
-
-    #[cfg(target_os = "macos")]
-    {
-        window = window
-            .with_title_hidden(true)
-            .with_titlebar_transparent(true)
-            .with_fullsize_content_view(true);
-    }
-
-    #[cfg(target_os = "linux")]
-    {
-        window = window.with_decorations(false);
-    }
-
-
-    let config = dioxus::desktop::Config::new()
-        .with_window(window)
-        .with_custom_protocol("artwork", |_headers, request| {
-            let uri = request.uri();
-
-            // Decode the file path from the ?p= parameter
-            let file_path: String = uri
-                .query()
-                .and_then(|q| {
-                    q.split('&')
-                        .find_map(|kv| kv.strip_prefix("p="))
-                        .map(|encoded| {
-                            percent_encoding::percent_decode_str(encoded)
-                                .decode_utf8_lossy()
-                                .into_owned()
-                        })
-                })
-                .unwrap_or_default();
-
-            if file_path.is_empty() {
-                return http::Response::builder()
-                    .status(400)
-                    .body(std::borrow::Cow::from(Vec::new()))
-                    .unwrap();
+        let presence: Option<Arc<Presence>> = match Presence::new("1470087339639443658") {
+            Ok(p) => {
+                println!("Discord presence connected!");
+                Some(Arc::new(p))
             }
+            Err(e) => {
+                eprintln!("Failed to connect to Discord: {e}");
+                None
+            }
+        };
 
-            // convert forward slashes back to backslashes for proper path handling
-            #[cfg(target_os = "windows")]
-            let file_path = file_path.replace('/', "\\");
+        PRESENCE.set(presence).ok();
 
-            #[cfg(not(target_os = "windows"))]
-            let file_path = if file_path.starts_with('~') {
-                if let Ok(home) = std::env::var("HOME") {
-                    file_path.replacen('~', &home, 1)
+        #[cfg(target_os = "macos")]
+        {
+            player::systemint::init();
+        }
+
+        let mut window = dioxus::desktop::WindowBuilder::new()
+            .with_title("Rusic")
+            .with_resizable(true)
+            .with_inner_size(LogicalSize::new(1350.0, 800.0));
+
+        #[cfg(target_os = "macos")]
+        {
+            window = window
+                .with_title_hidden(true)
+                .with_titlebar_transparent(true)
+                .with_fullsize_content_view(true);
+        }
+
+        #[cfg(target_os = "linux")]
+        {
+            window = window.with_decorations(false);
+        }
+
+        let config = dioxus::desktop::Config::new()
+            .with_window(window)
+            .with_custom_protocol("artwork", |_headers, request| {
+                let uri = request.uri();
+
+                let file_path: String = uri
+                    .query()
+                    .and_then(|q| {
+                        q.split('&')
+                            .find_map(|kv| kv.strip_prefix("p="))
+                            .map(|encoded| {
+                                percent_encoding::percent_decode_str(encoded)
+                                    .decode_utf8_lossy()
+                                    .into_owned()
+                            })
+                    })
+                    .unwrap_or_default();
+
+                if file_path.is_empty() {
+                    return http::Response::builder()
+                        .status(400)
+                        .body(std::borrow::Cow::from(Vec::new()))
+                        .unwrap();
+                }
+
+                // convert forward slashes back to backslashes for proper path handling
+                #[cfg(target_os = "windows")]
+                let file_path = file_path.replace('/', "\\");
+
+                #[cfg(not(target_os = "windows"))]
+                let file_path = if file_path.starts_with('~') {
+                    if let Ok(home) = std::env::var("HOME") {
+                        file_path.replacen('~', &home, 1)
+                    } else {
+                        file_path
+                    }
                 } else {
                     file_path
-                }
-            } else {
-                file_path
-            };
+                };
 
-            let path = std::path::Path::new(&file_path);
+                let path = std::path::Path::new(&file_path);
 
-            // Check
-            if !path.exists() {
-                eprintln!("[artwork] File not found: {}", file_path);
-                return http::Response::builder()
-                    .status(404)
-                    .body(std::borrow::Cow::from(Vec::new()))
-                    .unwrap();
-            }
-
-            let mime = if file_path.ends_with(".png") {
-                "image/png"
-            } else {
-                "image/jpeg"
-            };
-
-            // Read the file with error handling
-            match std::fs::read(path) {
-                Ok(content) => http::Response::builder()
-                    .header("Content-Type", mime)
-                    .header("Access-Control-Allow-Origin", "*")
-                    .header("Cache-Control", "public, max-age=31536000")
-                    .body(std::borrow::Cow::from(content))
-                    .unwrap(),
-                Err(e) => {
-                    eprintln!("[artwork] Failed to read file {}: {}", file_path, e);
-                    http::Response::builder()
-                        .status(500)
+                if !path.exists() {
+                    eprintln!("[artwork] File not found: {}", file_path);
+                    return http::Response::builder()
+                        .status(404)
                         .body(std::borrow::Cow::from(Vec::new()))
-                        .unwrap()
+                        .unwrap();
                 }
-            }
-        });
 
-    dioxus::LaunchBuilder::desktop()
-        .with_cfg(config)
-        .launch(App);
+                let mime = if file_path.ends_with(".png") {
+                    "image/png"
+                } else {
+                    "image/jpeg"
+                };
+
+                match std::fs::read(path) {
+                    Ok(content) => http::Response::builder()
+                        .header("Content-Type", mime)
+                        .header("Access-Control-Allow-Origin", "*")
+                        .header("Cache-Control", "public, max-age=31536000")
+                        .body(std::borrow::Cow::from(content))
+                        .unwrap(),
+                    Err(e) => {
+                        eprintln!("[artwork] Failed to read file {}: {}", file_path, e);
+                        http::Response::builder()
+                            .status(500)
+                            .body(std::borrow::Cow::from(Vec::new()))
+                            .unwrap()
+                    }
+                }
+            });
+
+        dioxus::LaunchBuilder::desktop()
+            .with_cfg(config)
+            .launch(App);
+    }
+
+    #[cfg(target_arch = "wasm32")]
+    {
+        dioxus::launch(App);
+    }
 }
 
 #[component]
@@ -144,28 +152,42 @@ fn App() -> Element {
     let mut library = use_signal(reader::Library::default);
     let mut current_route = use_signal(|| Route::Home);
     let cache_dir = use_memo(move || {
-        let path = directories::ProjectDirs::from("com", "temidaradev", "rusic")
-            .map(|dirs| dirs.cache_dir().to_path_buf())
-            .unwrap_or_else(|| std::path::Path::new("./cache").to_path_buf());
-        let _ = std::fs::create_dir_all(&path);
-        path
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            let path = directories::ProjectDirs::from("com", "temidaradev", "rusic")
+                .map(|dirs| dirs.cache_dir().to_path_buf())
+                .unwrap_or_else(|| std::path::Path::new("./cache").to_path_buf());
+            let _ = std::fs::create_dir_all(&path);
+            path
+        }
+        #[cfg(target_arch = "wasm32")]
+        std::path::PathBuf::from("./cache")
     });
     let config_dir = use_memo(move || {
-        let path = directories::ProjectDirs::from("com", "temidaradev", "rusic")
-            .map(|dirs| dirs.config_dir().to_path_buf())
-            .unwrap_or_else(|| std::path::Path::new("./config").to_path_buf());
-        let _ = std::fs::create_dir_all(&path);
-        path
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            let path = directories::ProjectDirs::from("com", "temidaradev", "rusic")
+                .map(|dirs| dirs.config_dir().to_path_buf())
+                .unwrap_or_else(|| std::path::Path::new("./config").to_path_buf());
+            let _ = std::fs::create_dir_all(&path);
+            path
+        }
+        #[cfg(target_arch = "wasm32")]
+        std::path::PathBuf::from("./config")
     });
     let lib_path = use_memo(move || cache_dir().join("library.json"));
     let config_path = use_memo(move || config_dir().join("config.json"));
     let mut config = use_signal(config::AppConfig::default);
+    #[allow(unused_variables)]
     let playlist_path = use_memo(move || cache_dir().join("playlists.json"));
     let mut playlist_store = use_signal(reader::PlaylistStore::default);
+    #[allow(unused_variables)]
     let favorites_path = use_memo(move || cache_dir().join("favorites.json"));
     let mut favorites_store = use_signal(FavoritesStore::default);
     let mut initial_load_done = use_signal(|| false);
+    #[allow(unused_variables)]
     let cover_cache = use_memo(move || cache_dir().join("covers"));
+    #[cfg(not(target_arch = "wasm32"))]
     let _ = std::fs::create_dir_all(cover_cache());
     let mut trigger_rescan = use_signal(|| 0);
     let current_playing = use_signal(|| 0);
@@ -199,8 +221,9 @@ fn App() -> Element {
         }
     });
 
+    #[cfg(not(target_arch = "wasm32"))]
     let presence = PRESENCE.get().cloned().flatten();
-
+    #[cfg(not(target_arch = "wasm32"))]
     provide_context(presence.clone());
 
     let mut selected_album_id = use_signal(String::new);
@@ -245,80 +268,99 @@ fn App() -> Element {
         if !*initial_load_done.read() {
             return;
         }
-        let config_snapshot = config.read().clone();
-        let path = config_path();
-        spawn(async move {
-            let result = tokio::task::spawn_blocking(move || config_snapshot.save(&path)).await;
-            if let Ok(Err(e)) = result {
-                eprintln!("Failed to save config: {}", e);
-            }
-        });
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            let config_snapshot = config.read().clone();
+            let path = config_path();
+            spawn(async move {
+                let result = tokio::task::spawn_blocking(move || config_snapshot.save(&path)).await;
+                if let Ok(Err(e)) = result {
+                    eprintln!("Failed to save config: {}", e);
+                }
+            });
+        }
     });
 
     use_effect(move || {
         if !*initial_load_done.read() {
             return;
         }
-        let store_snapshot = playlist_store.read().clone();
-        let path = playlist_path();
-        spawn(async move {
-            let result = tokio::task::spawn_blocking(move || store_snapshot.save(&path)).await;
-            if let Ok(Err(e)) = result {
-                eprintln!("Failed to save playlists: {}", e);
-            }
-        });
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            let store_snapshot = playlist_store.read().clone();
+            let path = playlist_path();
+            spawn(async move {
+                let result = tokio::task::spawn_blocking(move || store_snapshot.save(&path)).await;
+                if let Ok(Err(e)) = result {
+                    eprintln!("Failed to save playlists: {}", e);
+                }
+            });
+        }
     });
 
     use_effect(move || {
         if !*initial_load_done.read() {
             return;
         }
-        let lib_snapshot = library.read().clone();
-        let path = lib_path();
-        spawn(async move {
-            let result = tokio::task::spawn_blocking(move || lib_snapshot.save(&path)).await;
-            if let Ok(Err(e)) = result {
-                eprintln!("Failed to save library: {}", e);
-            }
-        });
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            let lib_snapshot = library.read().clone();
+            let path = lib_path();
+            spawn(async move {
+                let result = tokio::task::spawn_blocking(move || lib_snapshot.save(&path)).await;
+                if let Ok(Err(e)) = result {
+                    eprintln!("Failed to save library: {}", e);
+                }
+            });
+        }
     });
 
     use_hook(move || {
-        let lib_path = lib_path();
-        let config_path = config_path();
-        let playlist_path = playlist_path();
-        let favorites_path = favorites_path();
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            let lib_path = lib_path();
+            let config_path = config_path();
+            let playlist_path = playlist_path();
+            let favorites_path = favorites_path();
 
-        spawn(async move {
-            let lib_path_c = lib_path.clone();
-            let config_path_c = config_path.clone();
-            let playlist_path_c = playlist_path.clone();
-            let favorites_path_c = favorites_path.clone();
+            spawn(async move {
+                let lib_path_c = lib_path.clone();
+                let config_path_c = config_path.clone();
+                let playlist_path_c = playlist_path.clone();
+                let favorites_path_c = favorites_path.clone();
 
-            let (lib_res, cfg_res, pl_res, fav_res) = tokio::join!(
-                tokio::task::spawn_blocking(move || reader::Library::load(&lib_path_c)),
-                tokio::task::spawn_blocking(move || config::AppConfig::load(&config_path_c)),
-                tokio::task::spawn_blocking(move || reader::PlaylistStore::load(&playlist_path_c)),
-                tokio::task::spawn_blocking(move || FavoritesStore::load(&favorites_path_c)),
-            );
+                let (lib_res, cfg_res, pl_res, fav_res) = tokio::join!(
+                    tokio::task::spawn_blocking(move || reader::Library::load(&lib_path_c)),
+                    tokio::task::spawn_blocking(move || config::AppConfig::load(&config_path_c)),
+                    tokio::task::spawn_blocking(move || reader::PlaylistStore::load(
+                        &playlist_path_c
+                    )),
+                    tokio::task::spawn_blocking(move || FavoritesStore::load(&favorites_path_c)),
+                );
 
-            if let Ok(Ok(loaded)) = lib_res {
-                library.set(loaded);
-            }
-            if let Ok(loaded) = cfg_res {
-                config.set(loaded.clone());
-                volume.set(loaded.volume);
-                player.write().set_volume(loaded.volume);
-            }
-            if let Ok(Ok(loaded)) = pl_res {
-                playlist_store.set(loaded);
-            }
-            if let Ok(Ok(loaded)) = fav_res {
-                favorites_store.set(loaded);
-            }
+                if let Ok(Ok(loaded)) = lib_res {
+                    library.set(loaded);
+                }
+                if let Ok(loaded) = cfg_res {
+                    config.set(loaded.clone());
+                    volume.set(loaded.volume);
+                    player.write().set_volume(loaded.volume);
+                }
+                if let Ok(Ok(loaded)) = pl_res {
+                    playlist_store.set(loaded);
+                }
+                if let Ok(Ok(loaded)) = fav_res {
+                    favorites_store.set(loaded);
+                }
 
+                initial_load_done.set(true);
+            });
+        }
+        #[cfg(target_arch = "wasm32")]
+        {
+            config.write().active_source = config::MusicSource::Server;
             initial_load_done.set(true);
-        });
+        }
     });
 
     use_effect(move || {
@@ -328,6 +370,7 @@ fn App() -> Element {
         let music_dir = config.read().music_directory.clone();
         let _ = trigger_rescan.read();
 
+        #[cfg(not(target_arch = "wasm32"))]
         spawn(async move {
             if music_dir.exists() {
                 let mut current_lib = library.peek().clone();

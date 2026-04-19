@@ -102,7 +102,7 @@ pub fn JellyfinLibrary(
         }
         let conf = config.read();
         tracks
-            .iter()
+            .into_iter()
             .map(|t| {
                 let cover_url = if let Some(server) = &conf.server {
                     let path_str = t.path.to_string_lossy();
@@ -117,7 +117,7 @@ pub fn JellyfinLibrary(
                 } else {
                     None
                 };
-                (t.clone(), cover_url)
+                (t, cover_url)
             })
             .collect::<Vec<_>>()
     });
@@ -131,6 +131,7 @@ pub fn JellyfinLibrary(
 
     let is_empty = displayed_tracks().is_empty();
 
+    let queue_source = std::sync::Arc::new(queue_tracks());
     let tracks_nodes =
         displayed_tracks()
             .into_iter()
@@ -140,7 +141,7 @@ pub fn JellyfinLibrary(
                 let track_add = track.clone();
                 let track_path = track.path.clone();
                 let track_select = track.path.clone();
-                let queue_source = queue_tracks();
+                let queue_arc = std::sync::Arc::clone(&queue_source);
                 let track_key = format!("{}-{}", track.path.display(), idx);
                 let is_menu_open = active_menu_track.read().as_ref() == Some(&track.path);
                 let is_selected = selected_tracks.read().contains(&track_path);
@@ -181,8 +182,9 @@ pub fn JellyfinLibrary(
                         },
                         on_close_menu: move |_| active_menu_track.set(None),
                         on_delete: move |_| active_menu_track.set(None),
+                        hide_delete: true,
                         on_play: move |_| {
-                            queue.set(queue_source.clone());
+                            queue.set((*queue_arc).clone());
                             ctrl.play_track(idx);
                         },
                     }
@@ -331,11 +333,11 @@ pub fn JellyfinLibrary(
             if is_selection_mode() {
                 SelectionBar {
                     count: selected_tracks.read().len(),
+                    show_delete: false,
                     on_add_to_playlist: move |_| {
                         show_playlist_modal.set(true);
                     },
                     on_delete: move |_| {
-                        // Delete not supported for Jellyfin yet
                         is_selection_mode.set(false);
                         selected_tracks.write().clear();
                     },
