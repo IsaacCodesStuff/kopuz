@@ -31,32 +31,45 @@ pub fn PlaylistsPage(
 
     let mut show_add_playlist = use_signal(|| false);
     let mut playlist_name = use_signal(|| String::new());
-    let error = use_signal(|| Option::<String>::None);
+    let mut error = use_signal(|| Option::<String>::None);
     let mut playlist_refresh_trigger = use_signal(|| 0u64);
 
     let handle_add_playlist = move |_| {
         let name = playlist_name();
         if is_server {
-            spawn(async move {
+            let server_vals = {
                 let conf = config.peek();
-                if let Some(server) = &conf.server {
-                    if let (Some(token), Some(user_id)) = (&server.access_token, &server.user_id) {
-                        let ok = match server.service {
-                            MusicService::Jellyfin => {
-                                let remote = JellyfinClient::new(&server.url, Some(token), &conf.device_id, Some(user_id));
-                                remote.create_playlist(&name, &[]).await.is_ok()
-                            }
-                            MusicService::Subsonic | MusicService::Custom => {
-                                let remote = SubsonicClient::new(&server.url, user_id, token);
-                                remote.create_playlist(&name, &[]).await.is_ok()
-                            }
-                        };
-                        if ok {
+                conf.server.as_ref().and_then(|s| {
+                    if let (Some(tok), Some(uid)) = (&s.access_token, &s.user_id) {
+                        Some((s.service, s.url.clone(), tok.clone(), uid.clone(), conf.device_id.clone()))
+                    } else { None }
+                })
+            };
+            if let Some((service, url, token, user_id, device_id)) = server_vals {
+                error.set(None);
+                spawn(async move {
+                    let result = match service {
+                        MusicService::Jellyfin => {
+                            let remote = JellyfinClient::new(&url, Some(&token), &device_id, Some(&user_id));
+                            remote.create_playlist(&name, &[]).await
+                        }
+                        MusicService::Subsonic | MusicService::Custom => {
+                            let remote = SubsonicClient::new(&url, &user_id, &token);
+                            remote.create_playlist(&name, &[]).await
+                        }
+                    };
+                    match result {
+                        Ok(_) => {
                             playlist_refresh_trigger.with_mut(|v| *v += 1);
+                            show_add_playlist.set(false);
+                            playlist_name.set(String::new());
+                        }
+                        Err(e) => {
+                            error.set(Some(e));
                         }
                     }
-                }
-            });
+                });
+            }
         } else {
             let mut store = playlist_store.write();
             store.playlists.push(reader::models::Playlist {
@@ -64,10 +77,9 @@ pub fn PlaylistsPage(
                 name,
                 tracks: Vec::new(),
             });
+            show_add_playlist.set(false);
+            playlist_name.set(String::new());
         }
-
-        show_add_playlist.set(false);
-        playlist_name.set(String::new());
     };
 
     let mut last_source = use_signal(|| config.read().active_source.clone());
