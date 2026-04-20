@@ -74,7 +74,7 @@ pub fn PlaylistsPage(
                     }
                 });
             } else {
-                error.set(Some("Server not configured or credentials missing".to_string()));
+                error.set(Some(rust_i18n::t!("error_server_not_configured").to_string()));
             }
         } else {
             let mut store = playlist_store.write();
@@ -121,7 +121,8 @@ pub fn PlaylistsPage(
                     h1 { class: "text-3xl font-bold text-white", "{rust_i18n::t!(\"playlists\")}" }
                     button {
                         class: "text-white/60 flex items-center hover:text-white transition-colors p-3 rounded-full hover:bg-white/10",
-                        title: "Add playlist",
+                        title: rust_i18n::t!("add_playlist").to_string(),
+                        aria_label: rust_i18n::t!("add_playlist").to_string(),
                         onclick: move |_| { error.set(None); show_add_playlist.set(true); },
                         i { class: "fa-solid fa-add" }
                     }

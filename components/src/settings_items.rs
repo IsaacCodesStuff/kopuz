@@ -112,6 +112,9 @@ pub fn ServerSettings(
     on_delete: EventHandler<()>,
     on_login: EventHandler<()>,
 ) -> Element {
+    let login_text = rust_i18n::t!("login").to_string();
+    let delete_text = rust_i18n::t!("delete").to_string();
+
     rsx! {
         div { class: "flex flex-col gap-2",
             if let Some(server) = server {
@@ -128,7 +131,7 @@ pub fn ServerSettings(
                                 button {
                                     onclick: move |_| on_login.call(()),
                                     class: "text-xs bg-white/10 hover:bg-white/20 px-2 py-0.5 rounded text-white transition-colors",
-                                    "Login"
+                                    "{login_text}"
                                 }
                             }
                         }
@@ -136,7 +139,7 @@ pub fn ServerSettings(
                     button {
                         onclick: move |_| on_delete.call(()),
                         class: "text-red-400 hover:text-red-300 text-sm px-2 py-1 transition-colors",
-                        "Delete"
+                        "{delete_text}"
                     }
                 }
             } else {

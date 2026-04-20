@@ -285,7 +285,7 @@ pub fn PlaylistDetail(
                                  playlist_store.write().playlists.retain(|p| p.id != pid_for_delete);
                              },
                              i { class: "fa-solid fa-trash" }
-                             "Delete Playlist"
+                             "{rust_i18n::t!(\"delete_playlist\")}"
                         }
                     }
                 },

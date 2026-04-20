@@ -55,7 +55,7 @@ fn main() {
             player::systemint::init();
         }
 
-        let mut window = dioxus::desktop::WindowBuilder::new()
+        let window = dioxus::desktop::WindowBuilder::new()
             .with_title("Rusic")
             .with_resizable(true)
             .with_inner_size(LogicalSize::new(1350.0, 800.0));
@@ -239,7 +239,7 @@ fn App() -> Element {
     let mut selected_album_id = use_signal(String::new);
     let mut selected_playlist_id = use_signal(|| None::<String>);
     let mut selected_artist_name = use_signal(String::new);
-    let mut search_query = use_signal(String::new);
+    let search_query = use_signal(String::new);
     let mut last_server_playlist_key = use_signal(|| None::<String>);
     let mut server_playlist_key_initialized = use_signal(|| false);
 
@@ -392,6 +392,7 @@ fn App() -> Element {
                     config.set(loaded.clone());
                     volume.set(loaded.volume);
                     player.write().set_volume(loaded.volume);
+                    rust_i18n::set_locale(&loaded.language);
                 }
                 if let Ok(Ok(loaded)) = pl_res {
                     playlist_store.set(loaded);
@@ -410,9 +411,11 @@ fn App() -> Element {
                 loaded.active_source = config::MusicSource::Server;
             }
             let loaded_volume = loaded.volume;
+            let loaded_language = loaded.language.clone();
             config.set(loaded);
             volume.set(loaded_volume);
             player.write().set_volume(loaded_volume);
+            rust_i18n::set_locale(&loaded_language);
 
             if let Some((
                 route,

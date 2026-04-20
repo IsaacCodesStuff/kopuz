@@ -113,7 +113,7 @@ pub fn LocalHome(
                                     "{rust_i18n::t!(\"jump_back_in\")}"
                                 }
                                 h1 { class: "text-3xl md:text-5xl font-black text-white mb-4 leading-tight max-w-xl break-words", "{album.title}" }
-                                p { class: "text-base md:text-lg text-white/60 mb-8 font-medium line-clamp-1 max-w-md", "{rust_i18n::t!(\"by_artist\")}: {album.artist}" }
+                                p { class: "text-base md:text-lg text-white/60 mb-8 font-medium line-clamp-1 max-w-md", "{rust_i18n::t!(\"by_artist_full\", artist = album.artist)}" }
                                 div { class: "flex items-center gap-4",
                                     button {
                                         class: "flex items-center gap-3 bg-white text-black px-8 py-3 rounded-full font-bold hover:bg-white/90 hover:scale-105 active:scale-95 transition-all w-fit",
@@ -361,6 +361,11 @@ pub fn LocalHome(
                         class: "flex overflow-x-auto gap-6 pb-6 pt-2 scrollbar-hide scroll-smooth -mx-2 px-2",
                         for (id, name, track_count, first_track) in recent_playlists() {
                             {
+                                let track_count_text = if track_count == 1 {
+                                    rust_i18n::t!("track_count_singular").to_string()
+                                } else {
+                                    rust_i18n::t!("track_count", count = track_count).to_string()
+                                };
                                 let cover_url = if let Some(track_path) = first_track {
                                     let lib = library.peek();
                                     lib.tracks
@@ -395,7 +400,7 @@ pub fn LocalHome(
                                         }
                                         div {
                                             h3 { class: "text-white font-bold truncate text-sm md:text-base px-1 group-hover:text-indigo-400 transition-colors", "{name}" }
-                                            p { class: "text-xs md:text-sm text-white/40 truncate px-1 font-semibold mt-1", "{track_count} {rust_i18n::t!(\"tracks\")}" }
+                                            p { class: "text-xs md:text-sm text-white/40 truncate px-1 font-semibold mt-1", "{track_count_text}" }
                                         }
                                     }
                                 }

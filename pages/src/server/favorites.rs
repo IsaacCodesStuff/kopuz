@@ -330,7 +330,7 @@ pub fn JellyfinFavorites(
                     i { class: "fa-regular fa-heart text-4xl mb-4 opacity-30" }
                     p { class: "text-base", "{rust_i18n::t!(\"no_favorites\")}" }
                     p { class: "text-sm mt-1 opacity-70",
-                        "Heart a track while it's playing to add it here and sync it to your server."
+                        "{rust_i18n::t!(\"heart_track_to_add_server\")}"
                     }
                 }
             } else if !is_empty {

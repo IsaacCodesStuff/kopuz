@@ -24,8 +24,16 @@ pub fn Bottombar(
 ) -> Element {
     let mut is_dragging = use_signal(|| false);
     let mut drag_progress = use_signal(|| 0u64);
-    let mut is_muted = use_signal(|| false);
-    let mut volume_before_mute = use_signal(|| 0.5f32);
+    
+    let initial_volume = *volume.read();
+    let mut is_muted = use_signal(move || initial_volume <= f32::EPSILON);
+    let mut volume_before_mute = use_signal(move || {
+        if initial_volume > f32::EPSILON {
+            initial_volume
+        } else {
+            0.5f32
+        }
+    });
 
     let display_progress = if *is_dragging.read() {
         *drag_progress.read()
@@ -112,7 +120,7 @@ pub fn Bottombar(
                 }
                 button {
                     class: "{heart_class}",
-                    title: if heart_icon.contains("fa-solid") { 
+                    title: if is_favorite { 
                         rust_i18n::t!("remove_from_favorites").to_string()
                     } else { 
                         rust_i18n::t!("add_to_favorites").to_string()
@@ -206,6 +214,11 @@ pub fn Bottombar(
                     class: "flex items-center gap-6",
                     button {
                         class: format!("{} transition-all active:scale-95 relative", if *ctrl.shuffle.read() { "text-white" } else { "text-slate-400 hover:text-white" }),
+                        title: if *ctrl.shuffle.read() { 
+                            rust_i18n::t!("shuffle_on").to_string()
+                        } else { 
+                            rust_i18n::t!("shuffle_off").to_string()
+                        },
                         onclick: move |_| ctrl.toggle_shuffle(),
                         i { class: "fa-solid fa-shuffle text-sm" }
                     }
@@ -343,6 +356,10 @@ pub fn Bottombar(
                                     player.write().set_volume(val);
                                     volume.set(val);
                                     is_muted.set(val == 0.0);
+                                    // Keep track of last non-zero volume for unmute
+                                    if val > f32::EPSILON {
+                                        volume_before_mute.set(val);
+                                    }
                                 }
                             }
                         }

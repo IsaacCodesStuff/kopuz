@@ -1,6 +1,4 @@
 use config::MusicSource;
-#[cfg(not(target_arch = "wasm32"))]
-use dioxus::desktop::use_window;
 use dioxus::prelude::*;
 use rusic_route::Route;
 

@@ -134,8 +134,8 @@ pub fn Settings(config: Signal<AppConfig>) -> Element {
 
                         if !cfg!(target_arch = "wasm32") {
                             SettingItem {
-                                title: "Music Directory",
-                                description: format!("Current path: {}", config.read().music_directory.display()),
+                                title: rust_i18n::t!("music_directory").to_string(),
+                                description: format!("{}: {}", rust_i18n::t!("current_path").to_string(), config.read().music_directory.display()),
                                 control: rsx! {
                                     DirectoryPicker {
                                         on_change: move |path| {
@@ -150,7 +150,7 @@ pub fn Settings(config: Signal<AppConfig>) -> Element {
                             title: rust_i18n::t!("media_server").to_string(),
                             description: if config.read().server.is_some() {
                                 if let Some(server) = &config.read().server {
-                                    format!("{} {}", rust_i18n::t!("configured"), server.service.display_name())
+                                     rust_i18n::t!("configured", name = server.service.display_name()).to_string()
                                 } else {
                                     rust_i18n::t!("server_configured").to_string()
                                 }
@@ -168,11 +168,11 @@ pub fn Settings(config: Signal<AppConfig>) -> Element {
                         }
                         if !cfg!(target_arch = "wasm32") {
                             SettingItem {
-                                title: "Discord Presence",
+                                title: rust_i18n::t!("discord_presence").to_string(),
                                 description: if config.read().discord_presence.unwrap_or(true) {
-                                    "Discord presence enabled".to_string()
+                                    rust_i18n::t!("discord_presence_enabled").to_string()
                                 } else {
-                                    "Discord presence disabled".to_string()
+                                    rust_i18n::t!("discord_presence_disabled").to_string()
                                 },
                                 control: rsx! {
                                     DiscordPresenceSettings {

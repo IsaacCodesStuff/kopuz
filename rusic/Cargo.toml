@@ -85,4 +85,3 @@ inherits = "dev"
 
 [profile.android-dev]
 inherits = "dev"
-reqwest = { workspace = true, features = ["blocking"] }

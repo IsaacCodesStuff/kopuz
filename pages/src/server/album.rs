@@ -69,9 +69,12 @@ pub fn JellyfinAlbum(
             .collect::<Vec<_>>()
     });
 
+    let add_all_to_playlist_text = rust_i18n::t!("add_all_to_playlist").to_string();
+    let remove_from_cache_text = rust_i18n::t!("remove_from_cache").to_string();
+
     let album_menu_actions = vec![
-        MenuAction::new("Add All to Playlist", "fa-solid fa-list-music"),
-        MenuAction::new("Remove from Cache", "fa-solid fa-trash").destructive(),
+        MenuAction::new(add_all_to_playlist_text.as_str(), "fa-solid fa-list-music"),
+        MenuAction::new(remove_from_cache_text.as_str(), "fa-solid fa-trash").destructive(),
     ];
 
     rsx! {
@@ -243,6 +246,9 @@ pub fn JellyfinAlbumDetails(
 
     let total_seconds: u64 = album_tracks().iter().map(|(t, _)| t.duration).sum();
     let duration_min = total_seconds / 60;
+
+    let songs_text = rust_i18n::t!("songs").to_string();
+    let min_text = rust_i18n::t!("min").to_string();
 
     let cover_url = {
         let conf = config.read();
@@ -433,9 +439,9 @@ pub fn JellyfinAlbumDetails(
                     }
                     h1 { class: "text-5xl md:text-7xl font-bold text-white mb-6", "{album_title}" }
                     div { class: "flex items-center gap-6 text-slate-400",
-                        p { "{album_tracks().len()} songs" }
+                        p { "{album_tracks().len()} {songs_text}" }
                         span { "•" }
-                        p { "{duration_min} min" }
+                        p { "{duration_min} {min_text}" }
                     }
                 }
                 div { class: "flex items-center gap-4",

@@ -2,8 +2,6 @@ use config::{AppConfig, CustomTheme};
 use dioxus::prelude::*;
 use std::collections::HashMap;
 
-rust_i18n::i18n!("../locales");
-
 const VAR_LABELS: &[&str] = &[
     "bg",
     "raised",

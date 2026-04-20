@@ -19,18 +19,33 @@ pub fn PlaylistModal(props: PlaylistModalProps) -> Element {
     let create_new_playlist_text = rust_i18n::t!("create_new_playlist").to_string();
     let create_text = rust_i18n::t!("create").to_string();
     let cancel_text = rust_i18n::t!("cancel").to_string();
+    let playlist_name_input = rust_i18n::t!("playlist_name_input").to_string();
     
-    let playlists: Vec<_> = if props.is_jellyfin {
+    let playlists: Vec<(String, String, String)> = if props.is_jellyfin {
         store
             .jellyfin_playlists
             .iter()
-            .map(|p| (p.id.clone(), p.name.clone(), p.tracks.len()))
+            .map(|p| {
+                let track_text = if p.tracks.len() == 1 {
+                    rust_i18n::t!("track_count_singular").to_string()
+                } else {
+                    rust_i18n::t!("track_count", count = p.tracks.len()).to_string()
+                };
+                (p.id.clone(), p.name.clone(), track_text)
+            })
             .collect()
     } else {
         store
             .playlists
             .iter()
-            .map(|p| (p.id.clone(), p.name.clone(), p.tracks.len()))
+            .map(|p| {
+                let track_text = if p.tracks.len() == 1 {
+                    rust_i18n::t!("track_count_singular").to_string()
+                } else {
+                    rust_i18n::t!("track_count", count = p.tracks.len()).to_string()
+                };
+                (p.id.clone(), p.name.clone(), track_text)
+            })
             .collect()
     };
 
@@ -54,7 +69,7 @@ pub fn PlaylistModal(props: PlaylistModalProps) -> Element {
                             class: "w-full text-left p-3 rounded-lg bg-white/5 hover:bg-white/10 text-white transition-colors flex items-center justify-between group",
                             onclick: move |_| props.on_add_to_playlist.call(id.clone()),
                             span { "{name}" }
-                            span { class: "text-xs text-slate-500 group-hover:text-slate-400", "{track_count} tracks" }
+                            span { class: "text-xs text-slate-500 group-hover:text-slate-400", "{track_count}" }
                         }
                     }
                 }
@@ -65,7 +80,7 @@ pub fn PlaylistModal(props: PlaylistModalProps) -> Element {
                         input {
                             r#type: "text",
                             class: "flex-1 bg-white/5 border border-white/10 rounded px-3 py-2 text-white text-sm focus:outline-none focus:border-white/20",
-                            placeholder: "Playlist Name",
+                            placeholder: "{playlist_name_input}",
                             value: "{new_playlist_name}",
                             oninput: move |e| new_playlist_name.set(e.value()),
                             onkeydown: move |e| e.stop_propagation()

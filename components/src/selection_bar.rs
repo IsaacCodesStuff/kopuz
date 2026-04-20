@@ -12,6 +12,8 @@ pub fn SelectionBar(
         return rsx! { "" };
     }
 
+    let delete_text = rust_i18n::t!("delete").to_string();
+
     rsx! {
         div {
             class: "fixed bottom-24 left-1/2 -translate-x-1/2 bg-indigo-500 text-white px-6 py-2.5 rounded-full shadow-2xl flex items-center gap-4 z-50 animate-in fade-in zoom-in duration-200 font-mono",
@@ -33,7 +35,7 @@ pub fn SelectionBar(
                         class: "hover:opacity-80 transition-opacity flex items-center gap-2 font-medium whitespace-nowrap",
                         onclick: move |_| on_delete.call(()),
                         i { class: "fa-solid fa-trash text-sm" }
-                        span { class: "hidden sm:inline", "Delete" }
+                        span { class: "hidden sm:inline", "{delete_text}" }
                     }
                 }
             }

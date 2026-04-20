@@ -31,7 +31,7 @@ pub fn TrackRow(
     }
 
     if !hide_delete {
-        actions.push(MenuAction::new("Delete Song", "fa-solid fa-trash").destructive());
+        actions.push(MenuAction::new(delete_song_text.as_str(), "fa-solid fa-trash").destructive());
     }
 
     let mut long_press_task = use_signal(|| None);

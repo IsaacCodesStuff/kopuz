@@ -80,7 +80,7 @@ pub fn Fullscreen(
                 {
                     Some(l)
                 } else {
-                    Some(utils::lyrics::Lyrics::Plain("Lyrics not found".to_string()))
+                    Some(utils::lyrics::Lyrics::Plain(rust_i18n::t!("lyrics_not_found").to_string()))
                 }
             } else {
                 None

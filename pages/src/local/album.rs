@@ -32,9 +32,12 @@ pub fn LocalAlbum(
         unique_albums
     });
 
+    let add_all_to_playlist_text = rust_i18n::t!("add_all_to_playlist").to_string();
+    let delete_album_text = rust_i18n::t!("delete_album").to_string();
+
     let album_menu_actions = vec![
-        MenuAction::new("Add All to Playlist", "fa-solid fa-list-music"),
-        MenuAction::new("Delete Album", "fa-solid fa-trash").destructive(),
+        MenuAction::new(add_all_to_playlist_text.as_str(), "fa-solid fa-list-music"),
+        MenuAction::new(delete_album_text.as_str(), "fa-solid fa-trash").destructive(),
     ];
 
     rsx! {
