@@ -59,7 +59,13 @@ pub fn LocalPlaylists(
                                     }
                                 }
                                 h3 { class: "text-xl font-bold text-white mb-1 truncate", "{playlist.name}" }
-                                p { class: "text-sm text-slate-400", "{playlist.tracks.len()} tracks" }
+                                {
+                                    let count = playlist.tracks.len();
+                                    let track_text = rust_i18n::t!("playlist_track_count", count = count).to_string();
+                                    rsx! { 
+                                        p { class: "text-sm text-slate-400", "{track_text}" }
+                                    }
+                                }
                             }
                         }
                     })}
