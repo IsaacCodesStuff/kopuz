@@ -60,8 +60,9 @@ pub fn LocalLibrary(
     let total_tracks = displayed_tracks().len();
 
     let start_index = {
+        let max_start = total_tracks.saturating_sub(1);
         let calc = (scroll_top - (buffer_size as f64) * row_height) / row_height;
-        calc.floor().max(0.0) as usize
+        (calc.floor().max(0.0) as usize).min(max_start)
     };
 
     let end_index = {
