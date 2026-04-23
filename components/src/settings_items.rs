@@ -24,6 +24,7 @@ pub fn LanguageSelector(current_language: String, on_change: EventHandler<String
             onchange: move |evt| on_change.call(evt.value()),
             option { value: "en", "{rust_i18n::t!(\"english\")}" }
             option { value: "ru", "{rust_i18n::t!(\"russian\")}" }
+            option { value: "tok", "{rust_i18n::t!(\"toki pona\")}" }
         }
     }
 }
