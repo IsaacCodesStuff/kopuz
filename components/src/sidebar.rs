@@ -1,7 +1,7 @@
 use config::MusicSource;
-use dioxus::prelude::*;
 #[cfg(all(not(target_arch = "wasm32"), target_os = "macos"))]
 use dioxus::desktop::use_window;
+use dioxus::prelude::*;
 use kopuz_route::Route;
 
 #[derive(PartialEq, Clone)]
@@ -28,12 +28,12 @@ const TOP_MENU: &[SidebarItem] = &[
         icon: "fa-solid fa-book",
     },
     SidebarItem {
-        key: "album",
+        key: "albums",
         route: Route::Album,
         icon: "fa-solid fa-music",
     },
     SidebarItem {
-        key: "artist",
+        key: "artists",
         route: Route::Artist,
         icon: "fa-solid fa-user",
     },
@@ -60,11 +60,11 @@ const BOTTOM_MENU: &[SidebarItem] = &[
         route: Route::ThemeEditor,
         icon: "fa-solid fa-palette",
     },
-        SidebarItem {
-    key: "settings",
-    route: Route::Settings,
-    icon: "fa-solid fa-gear",
-        },
+    SidebarItem {
+        key: "settings",
+        route: Route::Settings,
+        icon: "fa-solid fa-gear",
+    },
 ];
 
 #[derive(Props, Clone, PartialEq)]
