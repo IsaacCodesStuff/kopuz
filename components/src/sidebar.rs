@@ -171,7 +171,7 @@ pub fn Sidebar(props: SidebarProps) -> Element {
             div {
                 class: "flex-1 flex flex-col overflow-y-auto overflow-x-hidden",
 
-                if !*is_collapsed.read() && !cfg!(target_arch = "wasm32") {
+                if !*is_collapsed.read() && !cfg!(target_arch = "wasm32") && config.read().show_source_toggle {
                     div {
                         class: "px-4 mb-6",
                         div {

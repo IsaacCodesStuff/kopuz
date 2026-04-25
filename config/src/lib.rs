@@ -76,6 +76,8 @@ pub struct AppConfig {
     pub language: String,
     #[serde(default)]
     pub reduce_animations: bool,
+    #[serde(default = "default_show_source_toggle")]
+    pub show_source_toggle: bool,
     #[serde(default = "default_volume")]
     pub volume: f32,
     #[serde(default)]
@@ -127,6 +129,10 @@ fn default_sort_order() -> SortOrder {
     SortOrder::Title
 }
 
+fn default_show_source_toggle() -> bool {
+    true
+}
+
 fn default_volume() -> f32 {
     1.0
 }
@@ -154,6 +160,7 @@ impl Default for AppConfig {
             lastfm_token: String::new(),
             language: default_language(),
             reduce_animations: false,
+            show_source_toggle: default_show_source_toggle(),
             volume: default_volume(),
             custom_themes: HashMap::new(),
         }

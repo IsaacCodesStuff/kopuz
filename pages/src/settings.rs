@@ -197,6 +197,22 @@ pub fn Settings(config: Signal<AppConfig>) -> Element {
                                 }
                             }
                         }
+                        if !cfg!(target_arch = "wasm32") {
+                            SettingItem {
+                                title: rust_i18n::t!("show_source_toggle").to_string(),
+                                description: if config.read().show_source_toggle {
+                                    rust_i18n::t!("show_source_toggle_on").to_string()
+                                } else {
+                                    rust_i18n::t!("show_source_toggle_off").to_string()
+                                },
+                                control: rsx! {
+                                    ToggleSetting {
+                                        enabled: config.read().show_source_toggle,
+                                        on_change: move |val| config.write().show_source_toggle = val,
+                                    }
+                                }
+                            }
+                        }
                         SettingItem {
                             title: rust_i18n::t!("listenbrainz").to_string(),
                             description: rust_i18n::t!("listenbrainz_token").to_string(),
