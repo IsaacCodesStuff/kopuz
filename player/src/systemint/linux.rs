@@ -175,7 +175,7 @@ impl PlayerInterface for P {
         Ok(true)
     }
     async fn can_seek(&self) -> fdo::Result<bool> {
-        Ok(true)
+        Ok(false)
     }
     async fn can_control(&self) -> fdo::Result<bool> {
         Ok(true)
@@ -187,7 +187,6 @@ pub fn update_position(position: f64) {
     if let Ok(mut s) = state().lock() {
         s.2 = Time::from_micros((position * 1e6) as i64);
     }
-    NOTIFY.get().map(|tx| tx.send(false));
 }
 
 fn setup() {
@@ -205,13 +204,13 @@ fn setup() {
                     if let Ok(srv) = Server::new("kopuz", P(st.clone(), tx())).await {
                         while let Some(seeked) = nrx.recv().await {
                             if let Ok(s) = st.lock() {
-                                srv.properties_changed([
-                                    Property::Metadata(s.0.clone()),
-                                    Property::PlaybackStatus(s.1),
-                                ])
-                                .await
-                                .ok();
                                 if seeked {
+                                    srv.properties_changed([
+                                        Property::Metadata(s.0.clone()),
+                                        Property::PlaybackStatus(s.1),
+                                    ])
+                                    .await
+                                    .ok();
                                     srv.emit(mpris_server::Signal::Seeked { position: s.2 })
                                         .await
                                         .ok();

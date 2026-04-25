@@ -1,3 +1,6 @@
+#[cfg(not(target_arch = "wasm32"))]
+#[cfg(target_os = "linux")]
+use std::sync::atomic::AtomicBool;
 use std::time::Duration;
 
 pub struct NowPlayingMeta {
@@ -55,6 +58,9 @@ pub struct Player {
     now_playing: Option<NowPlayingMeta>,
     position_micros: Arc<AtomicU64>,
     finish_callback: Option<Arc<dyn Fn() + Send + Sync + 'static>>,
+
+    #[cfg(target_os = "linux")]
+    position_thread_stop: Arc<AtomicBool>,
 }
 
 #[cfg(not(target_arch = "wasm32"))]
@@ -87,6 +93,7 @@ impl Player {
             now_playing: None,
             position_micros: Arc::new(AtomicU64::new(0)),
             finish_callback: None,
+            position_thread_stop: Arc::default(),
         }
     }
 
@@ -180,11 +187,18 @@ impl Player {
 
         #[cfg(target_os = "linux")]
         {
+            self.position_thread_stop.store(true, Ordering::Relaxed);
+            let stop = Arc::new(AtomicBool::new(false));
+            self.position_thread_stop = stop.clone();
             let pos = position_micros.clone();
             let state = state.clone();
+
             std::thread::spawn(move || {
                 loop {
                     std::thread::sleep(std::time::Duration::from_millis(250));
+                    if stop.load(Ordering::Relaxed) {
+                        break;
+                    }
                     let st = state.lock().unwrap();
                     if st.finished {
                         break;
