@@ -44,12 +44,12 @@ server = Servidor
 # UI Actions & Buttons
 add_to_favorites = Agregar a Favoritos
 remove_from_favorites = Eliminar de Favoritos
-add_to_playlist = Agregar a Playlista
-remove_from_playlist = Eliminar de Playlista
+add_to_playlist = Agregar a Playlist
+remove_from_playlist = Eliminar de Playlist
 delete = Borrar
 delete_song = Eliminar canción
 delete_album = Eliminar álbum
-add_all_to_playlist = Agregar todo a la playlista
+add_all_to_playlist = Agregar todo a la playlist
 remove_from_cache = Eliminar de caché
 create = Crear
 save = Guardar
@@ -76,21 +76,21 @@ back = Atrás
 back_to_previous = Anterior
 up_next = Próximo
 
-lyrics = Letras
+lyrics = Letra
 
 # Player/Media
-loading_lyrics = Cargando letras...
-lyrics_not_found = Letras no encontradas
+loading_lyrics = Cargando letra...
+lyrics_not_found = Letra no encontradas
 no_previous_songs = No hay canciones anteriores
 playlist_track_count = { $count } pistas
 music_playlist_count = Música • { $count } pistas
 showcase_song_count = { $count } canciones
 
 # Modal Titles
-add_playlist = Agregar playlista
+add_playlist = Agregar playlist
 create_new_playlist = Crear nueva playlist
 playlist_name_placeholder = Nombre de la playlist
-playlist_name_input = Nombre de la playlist
+playlist_name_input = Nombre de la Playlist
 add_media_server = Agregar servidor multimedia
 media_server = Servidor multimedia
 jellyfin = Jellyfin
@@ -109,7 +109,7 @@ listenbrainz_token_placeholder = Introduce tu token de ListenBrainz
 
 # Empty States
 album_not_found = Álbum no encontrado
-playlist_not_found = Playlista no encontrada
+playlist_not_found = Playlist no encontrada
 no_playlists_found = No hay playlists encontradas
 no_playlists_yet = Todavía no hay playlists. ¡Agrega canciones de tu librería!
 add_music_to_get_started = Agrega música para empezar
@@ -153,7 +153,7 @@ no_songs_here = No hay canciones aquí.
 syncing_with_server = Sincronizando con el servidor...
 most_played_tracks = Tus pistas más reproducidas.
 no_more_songs = No hay más canciones en cola
-server_playlist = Playlista del servidor
+server_playlist = Playlist del servidor
 shuffle_on = Aleatorio: Sí
 shuffle_off = Aleatorio: No
 repeat_off = Repetición: No
