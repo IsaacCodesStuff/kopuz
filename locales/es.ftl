@@ -5,7 +5,7 @@ settings = Ajustes
 theme_editor = Editar tema 
 appearance = Apariencia
 language = Lenguaje
-library = Librería
+library = Biblioteca
 playlists = Playlists
 album = Album
 artist = Artista
@@ -35,7 +35,7 @@ username = Nombre de usuario
 password = Contraseña
 player_settings = Configuración del reproductor
 discord_presence = Presencia de Discord
-reduce_animations = Reducir Animaciones
+reduce_animations = Reducir animaciones
 show_source_toggle = Mostrar interruptor de fuente
 volume = Volumen
 local = Local
@@ -54,7 +54,7 @@ remove_from_cache = Eliminar de caché
 create = Crear
 save = Guardar
 enabled = Habilitado
-disabled = Desabilitado
+disabled = Deshabilitado
 
 # Navigation & Headers
 tracks = Pistas
@@ -122,7 +122,7 @@ plays = Reproducciones
 track_count = { $count } pistas
 track_count_singular = 1 pista
 songs = canciones
-min = mínimo
+min = minuto
 
 # Error Messages
 invalid_server_url = URL de servidor no válida
@@ -162,7 +162,7 @@ repeat_track = Repetición: Pista
 rescan_library = Re-escanear librería
 refresh_music_library = Refrescar biblioteca de música
 listenbrainz = ListenBrainz
-album_art_gradient = Gradiente del arte del álbum
+album_art_gradient = Degradado de la carátula
 default_theme = Tema predeterminado
 gruvbox_material = Gruvbox Material
 gruvbox_classic = Gruvbox Clásico
