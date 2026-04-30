@@ -1,6 +1,7 @@
+use components::dots_menu::{DotsMenu, MenuAction};
 use components::playlist_modal::PlaylistModal;
 use components::selection_bar::SelectionBar;
-use config::{AppConfig, MusicService};
+use config::{AppConfig, ArtistViewOrder, MusicService};
 use dioxus::prelude::*;
 use reader::{Library, PlaylistStore};
 use ::server::jellyfin::JellyfinClient;
@@ -14,6 +15,7 @@ pub fn JellyfinArtist(
     config: Signal<AppConfig>,
     artist_name: Signal<String>,
     playlist_store: Signal<PlaylistStore>,
+    on_navigate: EventHandler<String>,
     mut queue: Signal<Vec<reader::models::Track>>,
     mut current_queue_index: Signal<usize>,
 ) -> Element {
@@ -22,9 +24,20 @@ pub fn JellyfinArtist(
     let mut active_menu_track = use_signal(|| None::<PathBuf>);
     let mut selected_track_for_playlist = use_signal(|| None::<PathBuf>);
 
-    // Multi-selection state
     let mut is_selection_mode = use_signal(|| false);
     let mut selected_tracks = use_signal(|| HashSet::<PathBuf>::new());
+
+    let sort_order = use_signal(move || config.read().artist_view_order.clone());
+    use_effect(move || {
+        let curr = sort_order.read().clone();
+        if config.peek().artist_view_order != curr {
+            config.write().artist_view_order = curr;
+        }
+    });
+
+    let mut open_album_menu = use_signal(|| None::<String>);
+    let mut show_album_playlist_modal = use_signal(|| false);
+    let mut pending_album_id_for_playlist = use_signal(|| None::<String>);
 
     let jellyfin_artists = use_memo(move || {
         let lib = library.read();
@@ -80,7 +93,40 @@ pub fn JellyfinArtist(
             })
     });
 
+    let artist_albums = use_memo(move || {
+        let lib = library.read();
+        let artist = artist_name.read();
+        if artist.is_empty() {
+            return Vec::new();
+        }
+        let artist_lc = artist.to_lowercase();
+        let mut albums: Vec<_> = lib
+            .jellyfin_albums
+            .iter()
+            .filter(|a| a.artist.to_lowercase() == artist_lc)
+            .cloned()
+            .collect();
+        albums.sort_by(|a, b| {
+            a.title
+                .trim()
+                .to_lowercase()
+                .cmp(&b.title.trim().to_lowercase())
+        });
+        let mut seen = HashSet::new();
+        albums.retain(|album| seen.insert(album.title.trim().to_lowercase()));
+        albums
+    });
+
     let name = artist_name.read().clone();
+
+    let tracks_for_album = |library: &Library, album_id: &str| -> Vec<PathBuf> {
+        library
+            .jellyfin_tracks
+            .iter()
+            .filter(|t| t.album_id == album_id)
+            .map(|t| t.path.clone())
+            .collect()
+    };
 
     rsx! {
         div {
@@ -176,8 +222,7 @@ pub fn JellyfinArtist(
                                                                 .collect();
                                                             if parts.len() >= 2 {
                                                                 let item_id = parts[1];
-                                                                let _ =
-                                                                    remote.add_to_playlist(&pid, item_id).await;
+                                                                let _ = remote.add_to_playlist(&pid, item_id).await;
                                                             }
                                                         }
                                                     }
@@ -277,67 +322,301 @@ pub fn JellyfinArtist(
                         }
                     }
 
-                    if artist_tracks().is_empty() {
-                        div {
-                            class: "flex flex-col items-center justify-center h-64 text-slate-500",
-                            i { class: "fa-regular fa-music text-4xl mb-4 opacity-30" }
-                            p { class: "text-base", "{i18n::t(\"no_tracks_found\")}" }
+                    if *sort_order.read() == ArtistViewOrder::Albums {
+                        if *show_album_playlist_modal.read() {
+                            PlaylistModal {
+                                playlist_store,
+                                is_jellyfin: true,
+                                on_close: move |_| show_album_playlist_modal.set(false),
+                                on_add_to_playlist: move |playlist_id: String| {
+                                    if let Some(album_id) = pending_album_id_for_playlist.read().clone() {
+                                        let lib = library.read();
+                                        let paths = tracks_for_album(&lib, &album_id);
+                                        drop(lib);
+                                        let pid = playlist_id.clone();
+                                        spawn(async move {
+                                            let conf = config.peek();
+                                            if let Some(server) = &conf.server {
+                                                if let (Some(token), Some(user_id)) =
+                                                    (&server.access_token, &server.user_id)
+                                                {
+                                                    match server.service {
+                                                        MusicService::Jellyfin => {
+                                                            let remote = JellyfinClient::new(
+                                                                &server.url,
+                                                                Some(token),
+                                                                &conf.device_id,
+                                                                Some(user_id),
+                                                            );
+                                                            for path in paths {
+                                                                let parts: Vec<&str> = path
+                                                                    .to_str()
+                                                                    .unwrap_or_default()
+                                                                    .split(':')
+                                                                    .collect();
+                                                                if parts.len() >= 2 {
+                                                                    let item_id = parts[1];
+                                                                    let _ = remote.add_to_playlist(&pid, item_id).await;
+                                                                }
+                                                            }
+                                                        }
+                                                        MusicService::Subsonic | MusicService::Custom => {
+                                                            let remote = SubsonicClient::new(&server.url, user_id, token);
+                                                            for path in paths {
+                                                                let parts: Vec<&str> = path
+                                                                    .to_str()
+                                                                    .unwrap_or_default()
+                                                                    .split(':')
+                                                                    .collect();
+                                                                if parts.len() >= 2 {
+                                                                    let item_id = parts[1];
+                                                                    let _ = remote.add_to_playlist(&pid, item_id).await;
+                                                                }
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        });
+                                    }
+                                    show_album_playlist_modal.set(false);
+                                    pending_album_id_for_playlist.set(None);
+                                },
+                                on_create_playlist: move |playlist_name: String| {
+                                    let paths = pending_album_id_for_playlist
+                                        .read()
+                                        .as_deref()
+                                        .map(|id| {
+                                            let lib = library.read();
+                                            tracks_for_album(&lib, id)
+                                        })
+                                        .unwrap_or_default();
+                                    spawn(async move {
+                                        let conf = config.peek();
+                                        if let Some(server) = &conf.server {
+                                            if let (Some(token), Some(user_id)) =
+                                                (&server.access_token, &server.user_id)
+                                            {
+                                                let item_ids: Vec<String> = paths.iter().filter_map(|p| {
+                                                    let parts: Vec<&str> = p.to_str()?.split(':').collect();
+                                                    if parts.len() >= 2 { Some(parts[1].to_string()) } else { None }
+                                                }).collect();
+                                                if !item_ids.is_empty() {
+                                                    let item_id_refs: Vec<&str> = item_ids.iter().map(|s| s.as_str()).collect();
+                                                    match server.service {
+                                                        MusicService::Jellyfin => {
+                                                            let remote = JellyfinClient::new(
+                                                                &server.url,
+                                                                Some(token),
+                                                                &conf.device_id,
+                                                                Some(user_id),
+                                                            );
+                                                            let _ = remote
+                                                                .create_playlist(&playlist_name, &item_id_refs)
+                                                                .await;
+                                                        }
+                                                        MusicService::Subsonic | MusicService::Custom => {
+                                                            let remote = SubsonicClient::new(&server.url, user_id, token);
+                                                            let _ = remote
+                                                                .create_playlist(&playlist_name, &item_id_refs)
+                                                                .await;
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    });
+                                    show_album_playlist_modal.set(false);
+                                    pending_album_id_for_playlist.set(None);
+                                },
+                            }
                         }
-                    } else {
-                        components::showcase::Showcase {
-                            name: name.clone(),
-                            description: i18n::t("artist").to_string(),
-                            cover_url: artist_cover(),
-                            tracks: artist_tracks(),
-                            library,
-                            active_track: active_menu_track.read().clone(),
-                            is_selection_mode: is_selection_mode(),
-                            selected_tracks: selected_tracks.read().clone(),
-                            on_long_press: move |idx: usize| {
-                                if let Some(track) = artist_tracks().get(idx) {
-                                    is_selection_mode.set(true);
-                                    selected_tracks.write().insert(track.path.clone());
-                                }
-                            },
-                            on_select: move |(idx, selected): (usize, bool)| {
-                                if let Some(track) = artist_tracks().get(idx) {
-                                    if selected {
-                                        selected_tracks.write().insert(track.path.clone());
-                                    } else {
-                                        selected_tracks.write().remove(&track.path);
-                                        if selected_tracks.read().is_empty() {
-                                            is_selection_mode.set(false);
+
+                        SortOrderToggle { sort_order }
+
+                        if artist_albums().is_empty() {
+                            p { class: "text-slate-500", "{i18n::t(\"no_albums_found\")}" }
+                        } else {
+                            {
+                                let add_all_to_playlist_text = i18n::t("add_all_to_playlist").to_string();
+                                let album_menu_actions = vec![
+                                    MenuAction::new(add_all_to_playlist_text.as_str(), "fa-solid fa-list-music"),
+                                ];
+                                rsx! {
+                                    div { class: "grid grid-cols-[repeat(auto-fill,minmax(180px,1fr))] gap-6",
+                                        for album in artist_albums() {
+                                            {
+                                                let id_for_menu = album.id.clone();
+                                                let id_for_action = album.id.clone();
+                                                let id_for_navigate = album.id.clone();
+                                                let is_open = open_album_menu.read().as_deref() == Some(&album.id);
+                                                let cover_url = if let Some(server) = &config.read().server {
+                                                    album.cover_path.as_ref().and_then(|p| {
+                                                        let path_str = p.to_string_lossy();
+                                                        utils::jellyfin_image::jellyfin_image_url_from_path(
+                                                            &path_str,
+                                                            &server.url,
+                                                            server.access_token.as_deref(),
+                                                            320,
+                                                            80,
+                                                        )
+                                                    })
+                                                } else {
+                                                    None
+                                                };
+                                                rsx! {
+                                                    div {
+                                                        key: "{album.id}",
+                                                        class: "group relative p-4 bg-white/5 rounded-xl hover:bg-white/10 transition-colors",
+                                                        onclick: move |_| on_navigate.call(id_for_navigate.clone()),
+                                                        oncontextmenu: {
+                                                            let id = id_for_menu.clone();
+                                                            move |evt| {
+                                                                evt.prevent_default();
+                                                                open_album_menu.set(Some(id.clone()));
+                                                            }
+                                                        },
+                                                        div { class: "cursor-pointer",
+                                                            div { class: "aspect-square rounded-lg bg-stone-800 mb-3 overflow-hidden relative",
+                                                                if let Some(url) = &cover_url {
+                                                                    img {
+                                                                        src: "{url}",
+                                                                        class: "w-full h-full object-cover group-hover:scale-105 transition-transform duration-300",
+                                                                        decoding: "async", loading: "lazy",
+                                                                    }
+                                                                } else {
+                                                                    div { class: "w-full h-full flex items-center justify-center",
+                                                                        i { class: "fa-solid fa-compact-disc text-4xl text-white/20" }
+                                                                    }
+                                                                }
+                                                            }
+                                                            h3 { class: "text-white font-medium truncate", "{album.title}" }
+                                                            p { class: "text-sm text-stone-400 truncate", "{album.artist}" }
+                                                        }
+
+                                                        div { class: "absolute bottom-3 right-3",
+                                                            DotsMenu {
+                                                                actions: album_menu_actions.clone(),
+                                                                is_open,
+                                                                on_open: {
+                                                                    let id = id_for_menu.clone();
+                                                                    move |_| open_album_menu.set(Some(id.clone()))
+                                                                },
+                                                                on_close: move |_| open_album_menu.set(None),
+                                                                button_class: "opacity-0 group-hover:opacity-100 focus:opacity-100 bg-black/40".to_string(),
+                                                                anchor: "right".to_string(),
+                                                                on_action: {
+                                                                    let id = id_for_action.clone();
+                                                                    move |idx: usize| {
+                                                                        open_album_menu.set(None);
+                                                                        if idx == 0 {
+                                                                            pending_album_id_for_playlist.set(Some(id.clone()));
+                                                                            show_album_playlist_modal.set(true);
+                                                                        }
+                                                                    }
+                                                                },
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
                                         }
                                     }
                                 }
-                            },
-                            on_play: move |idx: usize| {
-                                let tracks = artist_tracks();
-                                queue.set(tracks.clone());
-                                current_queue_index.set(idx);
-                                ctrl.play_track(idx);
-                            },
-                            on_click_menu: move |idx: usize| {
-                                if let Some(track) = artist_tracks().get(idx) {
-                                    if active_menu_track.read().as_ref() == Some(&track.path) {
-                                        active_menu_track.set(None);
-                                    } else {
-                                        active_menu_track.set(Some(track.path.clone()));
+                            }
+                        }
+                    } else {
+                        if artist_tracks().is_empty() {
+                            div {
+                                class: "flex flex-col items-center justify-center h-64 text-slate-500",
+                                i { class: "fa-regular fa-music text-4xl mb-4 opacity-30" }
+                                p { class: "text-base", "{i18n::t(\"no_tracks_found\")}" }
+                            }
+                        } else {
+                            components::showcase::Showcase {
+                                name: name.clone(),
+                                description: i18n::t("artist").to_string(),
+                                cover_url: artist_cover(),
+                                tracks: artist_tracks(),
+                                library,
+                                active_track: active_menu_track.read().clone(),
+                                is_selection_mode: is_selection_mode(),
+                                selected_tracks: selected_tracks.read().clone(),
+                                on_long_press: move |idx: usize| {
+                                    if let Some(track) = artist_tracks().get(idx) {
+                                        is_selection_mode.set(true);
+                                        selected_tracks.write().insert(track.path.clone());
                                     }
-                                }
-                            },
-                            on_close_menu: move |_| active_menu_track.set(None),
-                            on_add_to_playlist: move |idx: usize| {
-                                if let Some(track) = artist_tracks().get(idx) {
-                                    selected_track_for_playlist.set(Some(track.path.clone()));
-                                    show_playlist_modal.set(true);
-                                    active_menu_track.set(None);
-                                }
-                            },
-                            on_delete_track: move |_| active_menu_track.set(None),
-                            actions: None,
+                                },
+                                on_select: move |(idx, selected): (usize, bool)| {
+                                    if let Some(track) = artist_tracks().get(idx) {
+                                        if selected {
+                                            selected_tracks.write().insert(track.path.clone());
+                                        } else {
+                                            selected_tracks.write().remove(&track.path);
+                                            if selected_tracks.read().is_empty() {
+                                                is_selection_mode.set(false);
+                                            }
+                                        }
+                                    }
+                                },
+                                on_play: move |idx: usize| {
+                                    let tracks = artist_tracks();
+                                    queue.set(tracks.clone());
+                                    current_queue_index.set(idx);
+                                    ctrl.play_track(idx);
+                                },
+                                on_click_menu: move |idx: usize| {
+                                    if let Some(track) = artist_tracks().get(idx) {
+                                        if active_menu_track.read().as_ref() == Some(&track.path) {
+                                            active_menu_track.set(None);
+                                        } else {
+                                            active_menu_track.set(Some(track.path.clone()));
+                                        }
+                                    }
+                                },
+                                on_close_menu: move |_| active_menu_track.set(None),
+                                on_add_to_playlist: move |idx: usize| {
+                                    if let Some(track) = artist_tracks().get(idx) {
+                                        selected_track_for_playlist.set(Some(track.path.clone()));
+                                        show_playlist_modal.set(true);
+                                        active_menu_track.set(None);
+                                    }
+                                },
+                                on_delete_track: move |_| active_menu_track.set(None),
+                                actions: Some(rsx! {
+                                    SortOrderToggle { sort_order }
+                                }),
+                            }
                         }
                     }
+                }
+            }
+        }
+    }
+}
+
+#[component]
+fn SortOrderToggle(mut sort_order: Signal<ArtistViewOrder>) -> Element {
+    let is_tracks = *sort_order.read() == ArtistViewOrder::Tracks;
+
+    let btn_active =
+        "px-3 py-1 text-xs rounded-md bg-white/10 text-white font-medium transition-all";
+    let btn_inactive =
+        "px-3 py-1 text-xs rounded-md text-white/40 hover:text-white/80 transition-all";
+
+    rsx! {
+        div { class: "flex justify-end mb-4",
+            div { class: "flex space-x-1 bg-white/5 border border-white/5 p-1 rounded-lg",
+                button {
+                    class: if is_tracks { btn_active } else { btn_inactive },
+                    onclick: move |_| sort_order.set(ArtistViewOrder::Tracks),
+                    "{i18n::t(\"tracks\")}"
+                }
+                button {
+                    class: if !is_tracks { btn_active } else { btn_inactive },
+                    onclick: move |_| sort_order.set(ArtistViewOrder::Albums),
+                    "{i18n::t(\"albums\")}"
                 }
             }
         }
@@ -350,6 +629,7 @@ pub fn ServerArtist(
     config: Signal<AppConfig>,
     artist_name: Signal<String>,
     playlist_store: Signal<PlaylistStore>,
+    on_navigate: EventHandler<String>,
     queue: Signal<Vec<reader::models::Track>>,
     current_queue_index: Signal<usize>,
 ) -> Element {
@@ -365,6 +645,7 @@ pub fn ServerArtist(
                 config,
                 artist_name,
                 playlist_store,
+                on_navigate,
                 queue,
                 current_queue_index,
             }
@@ -375,6 +656,7 @@ pub fn ServerArtist(
                 config,
                 artist_name,
                 playlist_store,
+                on_navigate,
                 queue,
                 current_queue_index,
             }
@@ -385,6 +667,7 @@ pub fn ServerArtist(
                 config,
                 artist_name,
                 playlist_store,
+                on_navigate,
                 queue,
                 current_queue_index,
             }
@@ -398,6 +681,7 @@ pub fn SubsonicArtist(
     config: Signal<AppConfig>,
     artist_name: Signal<String>,
     playlist_store: Signal<PlaylistStore>,
+    on_navigate: EventHandler<String>,
     queue: Signal<Vec<reader::models::Track>>,
     current_queue_index: Signal<usize>,
 ) -> Element {
@@ -407,6 +691,7 @@ pub fn SubsonicArtist(
             config,
             artist_name,
             playlist_store,
+            on_navigate,
             queue,
             current_queue_index,
         }
@@ -419,6 +704,7 @@ pub fn CustomArtist(
     config: Signal<AppConfig>,
     artist_name: Signal<String>,
     playlist_store: Signal<PlaylistStore>,
+    on_navigate: EventHandler<String>,
     queue: Signal<Vec<reader::models::Track>>,
     current_queue_index: Signal<usize>,
 ) -> Element {
@@ -428,6 +714,7 @@ pub fn CustomArtist(
             config,
             artist_name,
             playlist_store,
+            on_navigate,
             queue,
             current_queue_index,
         }

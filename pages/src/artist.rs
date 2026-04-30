@@ -40,6 +40,7 @@ pub fn Artist(
                             config,
                             artist_name,
                             playlist_store,
+                            on_navigate,
                             queue,
                             current_queue_index,
                         }
@@ -69,6 +70,7 @@ pub fn Artist(
                             config,
                             artist_name,
                             playlist_store,
+                            on_navigate,
                             queue,
                             current_queue_index,
                         }
