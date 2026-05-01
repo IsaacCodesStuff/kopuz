@@ -14,7 +14,7 @@ use crate::systemint;
 #[cfg(not(target_arch = "wasm32"))]
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 #[cfg(not(target_arch = "wasm32"))]
-use rb::{RB, RbConsumer, RbProducer, SpscRb};
+use rb::{RB, RbConsumer, RbInspector, RbProducer, SpscRb};
 #[cfg(not(target_arch = "wasm32"))]
 use std::sync::atomic::{AtomicU64, Ordering};
 #[cfg(not(target_arch = "wasm32"))]
@@ -51,6 +51,7 @@ pub struct Player {
     stream_config: cpal::StreamConfig,
     _stream: Option<cpal::Stream>,
     ring_buf_consumer: Option<Arc<Mutex<rb::Consumer<f32>>>>,
+    ring_buf: Option<SpscRb<f32>>,
     decoder_handle: Option<std::thread::JoinHandle<()>>,
 
     now_playing: Option<NowPlayingMeta>,
@@ -87,6 +88,7 @@ impl Player {
             stream_config,
             _stream: None,
             ring_buf_consumer: None,
+            ring_buf: None,
             decoder_handle: None,
             now_playing: None,
             position_micros: Arc::new(AtomicU64::new(0)),
@@ -132,6 +134,7 @@ impl Player {
         let (producer, consumer) = (ring_buf.producer(), ring_buf.consumer());
         let consumer = Arc::new(Mutex::new(consumer));
         self.ring_buf_consumer = Some(consumer.clone());
+        self.ring_buf = Some(ring_buf);
 
         let stream_state = state.clone();
         let stream_consumer = consumer.clone();
@@ -648,6 +651,17 @@ impl Player {
         st.finished
     }
 
+    pub fn is_playback_complete(&self) -> bool {
+        let st = self.state.lock().unwrap_or_else(|e| e.into_inner());
+        if !st.finished {
+            return false;
+        }
+        if let Some(rb) = &self.ring_buf {
+            return rb.is_empty();
+        }
+        true
+    }
+
     pub fn is_paused(&self) -> bool {
         let st = self.state.lock().unwrap_or_else(|e| e.into_inner());
         st.paused
@@ -669,6 +683,7 @@ impl Player {
 
         self._stream = None;
         self.ring_buf_consumer = None;
+        self.ring_buf = None;
 
         if let Some(handle) = self.decoder_handle.take() {
             let _ = handle.join();
@@ -811,6 +826,10 @@ impl Player {
 
     pub fn is_empty(&self) -> bool {
         !self.has_source || self.audio.ended() || self.audio.error().is_some()
+    }
+
+    pub fn is_playback_complete(&self) -> bool {
+        self.is_empty()
     }
 
     pub fn is_paused(&self) -> bool {

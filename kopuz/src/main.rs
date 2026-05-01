@@ -504,7 +504,9 @@ fn App() -> Element {
             let new_roots: std::collections::HashSet<_> = configured_dirs.iter().cloned().collect();
 
             if current_roots != new_roots {
-                current_lib = reader::Library::new(configured_dirs.clone());
+                current_lib.root_paths = configured_dirs.clone();
+                current_lib.tracks.clear();
+                current_lib.albums.clear();
                 library.set(current_lib.clone());
             }
 
@@ -761,6 +763,10 @@ fn App() -> Element {
                                 artist_name: selected_artist_name,
                                 playlist_store: playlist_store,
                                 player: player,
+                                on_navigate: move |album_id| {
+                                    selected_album_id.set(album_id);
+                                    current_route.set(Route::Album);
+                                },
                                 is_playing: is_playing,
                                 current_playing: current_playing,
                                 current_song_cover_url: current_song_cover_url,

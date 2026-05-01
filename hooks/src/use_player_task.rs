@@ -113,12 +113,7 @@ pub fn use_player_task(mut ctrl: PlayerController) {
             nudge_event_loop();
         });
 
-        // When a track ends naturally in the background, the Dioxus event loop
-        // may be idle and won't poll the use_future auto-skip check. Mirror the
-        // exact wakeup path used by media-key commands so the next track starts
-        // immediately, even with the window hidden.
         ctrl.player.write().set_finish_callback(|| {
-            send_bg_cmd(BgCmd::Next);
             if let Some(notify) = BG_NOTIFY.get() {
                 notify.notify_one();
             }
@@ -131,7 +126,6 @@ pub fn use_player_task(mut ctrl: PlayerController) {
         let mut ctrl = ctrl;
         init_bg_channel();
         ctrl.player.write().set_finish_callback(|| {
-            send_bg_cmd(BgCmd::Next);
             if let Some(notify) = BG_NOTIFY.get() {
                 notify.notify_one();
             }
@@ -416,22 +410,15 @@ pub fn use_player_task(mut ctrl: PlayerController) {
                         }
                     }
 
-                    let is_jellyfin = {
-                        let q = ctrl.queue.read();
-                        let idx = *ctrl.current_queue_index.read();
-                        q.get(idx)
-                            .map(|t| t.path.to_string_lossy().starts_with("jellyfin:"))
-                            .unwrap_or(false)
-                    };
-
-                    let should_skip = if is_jellyfin {
-                        duration > 0 && pos.as_secs() >= duration
-                    } else {
-                        ctrl.player.read().is_empty() || (duration > 0 && pos.as_secs() >= duration)
-                    };
+                    let should_skip = ctrl.player.read().is_playback_complete()
+                        || (duration > 0 && pos.as_secs() >= duration);
 
                     if should_skip && !*ctrl.is_loading.read() && !*ctrl.skip_in_progress.read() {
                         ctrl.skip_in_progress.set(true);
+                        if duration > 0 && last_progress_secs != duration {
+                            last_progress_secs = duration;
+                            ctrl.current_song_progress.set(duration);
+                        }
                         {
                             let mut config_write = config.write();
                             let q = ctrl.queue.peek();

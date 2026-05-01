@@ -1,0 +1,223 @@
+language-name = Ελληνικά
+is_rtl = false
+
+settings = Ρυθμίσεις
+theme_editor = Επεξεργαστής Θέματος
+appearance = Εμφάνιση
+language = Γλώσσα
+library = Βιβλιοθήκη
+playlists = Λίστες Αναπαραγωγής
+album = Άλμπουμ
+artist = Καλλιτέχνης
+home = Αρχική
+search = Αναζήτηση
+favorites = Αγαπημένα
+logs = Καταγραφές
+activity = Δραστηριότητες
+general = Γενικά
+music_directory = Φάκελος Μουσικής
+service = Υπηρεσία: { $name }
+connected = ● Συνδεδεμένο
+disconnected = ● Αποσυνδεδεμένο
+reconnect = Επανασύνδεση
+remove = Αφαίρεση
+add = Προσθήκη
+add_server = Προσθήκη Διακομιστή
+server_details = Λεπτομέρειες Διακομιστή
+server_name = Όνομα Διακομιστή
+server_url = URL Διακομιστή
+choose_service = Επιλογή Υπηρεσίας
+cancel = Ακύρωση
+login = Σύνδεση
+logging_in = Γίνεται σύνδεση...
+login_to_service = Σύνδεση στο { $service }
+username = Όνομα Χρήστη
+password = Κωδικός
+player_settings = Ρυθμίσεις Αναπαραγωγής
+discord_presence = Κατάσταση Discord
+reduce_animations = Μείωση κινήσεων
+show_source_toggle = Εμφάνιση διακόπτη πηγής
+volume = Ένταση
+local = Τοπικά
+server = Διακομιστής
+
+# UI Actions & Buttons
+add_to_favorites = Προσθήκη στα Αγαπημένα
+remove_from_favorites = Αφαίρεση από τα Αγαπημένα
+add_to_playlist = Προσθήκη στη Λίστα Αναπαραγωγής
+remove_from_playlist = Αφαίρεση από τη Λίστα Αναπαραγωγής
+delete = Διαγραφή
+delete_song = Διαγραφή Τραγουδιού
+delete_album = Διαγραφή Άλμπουμ
+add_all_to_playlist = Προσθήκη Όλων στη Λίστα Αναπαραγωγής
+remove_from_cache = Αφαίρεση από την Κρυφή Μνήμη
+create = Δημιουργία
+save = Αποθήκευση
+enabled = Ενεργό
+disabled = Ανενεργό
+
+# Navigation & Headers
+tracks = Κομμάτια
+albums = Άλμπουμ
+artists = Καλλιτέχνες
+all_albums = Όλα τα Άλμπουμ
+your_library = Η Βιβλιοθήκη σας
+listening_logs = Αρχεία Ακρόασης
+browse_genres = Περιήγηση ανά Είδος
+top_artists = Κορυφαίοι Καλλιτέχνες
+new_releases = Νέες Κυκλοφορίες
+
+# Navigation Buttons
+back_to_albums = Επιστροφή στα Άλμπουμ
+back_to_artists = Επιστροφή στους Καλλιτέχνες
+back_to_playlists = Επιστροφή στις Λίστες Αναπαραγωγής
+back_to_browse = Επιστροφή στην Αναζήτηση
+back = Πίσω
+back_to_previous = Πίσω
+up_next = Επόμενο
+lyrics = Στίχοι
+
+# Player/Media
+loading_lyrics = Φόρτωση στίχων...
+lyrics_not_found = Οι στίχοι δεν βρέθηκαν
+no_previous_songs = Δεν υπάρχει προηγούμενο τραγούδι
+playlist_track_count = { $count } κομμάτια
+music_playlist_count = Μουσική • { $count } κομμάτια
+showcase_song_count = { $count } τραγούδια
+
+# Modal Titles
+add_playlist = Προσθήκη λίστας αναπαραγωγής
+create_new_playlist = Δημιουργία Νέας Λίστας Αναπαραγωγής
+playlist_name_placeholder = Όνομα λίστας αναπαραγωγής
+playlist_name_input = Όνομα Λίστας Αναπαραγωγής
+add_media_server = Προσθήκη Διακομιστή Μέσων
+media_server = Διακομιστής Μέσων
+jellyfin = Jellyfin
+subsonic = Subsonic
+custom_manual = Προσαρμοσμένο (χειροκίνητο API)
+server_name_optional = Όνομα διακομιστή (προαιρετικό)
+server_url_placeholder = http://localhost:8096
+change = Αλλαγή
+heart_track_to_add = Πατήστε like σε ένα κομμάτι ενώ παίζει για να το προσθέσετε.
+heart_track_to_add_server = Πατήστε like σε ένα κομμάτι ενώ παίζει για να το προσθέσετε και να συγχρονιστεί με τον διακομιστή σας.
+
+# Search & Placeholders
+search_placeholder = Αναζήτηση καλλιτέχνη, άλμπουμ ή κομματιού...
+no_results_found = Δεν βρέθηκαν αποτελέσματα για "{ $query }"
+listenbrainz_token_placeholder = Εισάγετε το token σας στο ListenBrainz
+
+# Empty States
+album_not_found = Το άλμπουμ δεν βρέθηκε
+playlist_not_found = Η λίστα αναπαραγωγής δεν βρέθηκε
+no_playlists_found = Δεν βρέθηκαν λίστες αναπαραγωγής
+no_playlists_yet = Δεν υπάρχουν ακόμα λίστες αναπαραγωγής. Προσθέστε τραγούδια στη βιβλιοθήκη σας!
+add_music_to_get_started = Προσθέστε μουσική για να ξεκινήσετε
+
+# Data Labels
+title = Τίτλος
+time = Διάρκεια
+genre = Είδος
+plays = Αναπαραγωγές
+track_count = { $count } κομμάτια
+track_count_singular = 1 κομμάτι
+songs = τραγούδια
+min = λεπτ
+
+# Error Messages
+invalid_server_url = Μη έγκυρο URL διακομιστή
+username_and_password_required = Απαιτείται όνομα χρήστη και κωδικός
+login_failed = Αποτυχία σύνδεσης: { $error }
+error_server_not_configured = Ο διακομιστής δεν έχει ρυθμιστεί ή λείπουν τα διαπιστευτήρια
+error_fetch_songs = Αδυναμία ανάκτησης τραγουδιών για το άλμπουμ '{ $album_id }': { $error }
+unsupported_provider = Το { $service } έχει ρυθμιστεί, αλλά αυτή η σελίδα δεν υποστηρίζει ακόμα αυτόν τον πάροχο
+unsupported_provider_desc = Η περιήγηση ανά πάροχο για { $service } θα προστεθεί με το νέο σύστημα διακομιστών
+
+# Additional Keys
+no_genres_found = Δεν βρέθηκαν είδη στη βιβλιοθήκη σας.
+jump_back_in = Συνέχισε από εκεί που σταμάτησες
+by_artist = Από
+by_artist_full = Από { $artist }
+start_listening = Ξεκινήστε να ακούτε
+listen_now = Ακούστε τώρα
+no_albums_found = Δεν βρέθηκαν άλμπουμ στη βιβλιοθήκη σας.
+no_favorites = Δεν υπάρχουν ακόμα αγαπημένα.
+no_tracks_found = Δεν βρέθηκαν κομμάτια.
+unknown_artist = Άγνωστος Καλλιτέχνης
+unknown_album = Άγνωστο Άλμπουμ
+unknown_title = Άγνωστος Τίτλος
+unknown_genre = Άγνωστο
+most_played_local_tracks = Τα πιο πολυπαιγμένα τοπικά κομμάτια σας.
+no_tracks_in_library = Δεν βρέθηκαν κομμάτια στη βιβλιοθήκη σας.
+no_songs_here = Δεν υπάρχουν τραγούδια εδώ.
+syncing_with_server = Συγχρονισμός με τον διακομιστή...
+most_played_tracks = Τα πιο πολυπαιγμένα κομμάτια σας.
+no_more_songs = Δεν υπάρχουν άλλα τραγούδια στην ουρά
+server_playlist = Λίστα Αναπαραγωγής Διακομιστή
+shuffle_on = Τυχαία Αναπαραγωγή: Ανοιχτή
+shuffle_off = Τυχαία Αναπαραγωγή: Κλειστή
+repeat_off = Επανάληψη: Κλειστή
+repeat_queue = Επανάληψη: Ουρά
+repeat_track = Επανάληψη: Κομμάτι
+rescan_library = Επανάληψη Σάρωσης Βιβλιοθήκης
+refresh_music_library = Ανανέωση Μουσικής Βιβλιοθήκης
+listenbrainz = ListenBrainz
+album_art_gradient = Διαβάθμιση εξωφύλλου άλμπουμ
+default_theme = Προεπιλογή
+gruvbox_material = Gruvbox Material
+gruvbox_classic = Gruvbox Classic
+gruvbox_dark_soft = Gruvbox Dark Soft
+dracula = Dracula
+nord = Nord
+catppuccin_mocha = Catppuccin Mocha
+ef_night = Ef Night
+ayu_dark = Ayu Dark
+ayu_mirage = Ayu Mirage
+vague = Vague
+one_dark_pro = One Dark Pro
+osmium = Osmium
+kanagawa_dragon = Kanagawa Dragon
+everforest = Everforest
+rosepine = Rosé Pine
+default_light = Προεπιλογή Ανοιχτό
+catppuccin_latte = Catppuccin Latte
+rosepine_dawn = Rosé Pine Dawn
+everforest_light = Everforest Light
+ayu_light = Ayu Light
+one_light = One Light
+gruvbox_light_soft = Gruvbox Light Soft
+
+# Theme Editor
+new_theme = Νέο Θέμα
+theme_name = Όνομα Θέματος
+my_custom_theme = Προσαρμοσμένο Θέμα μου
+theme_group_dynamic = Δυναμικό
+theme_group_dark = Σκούρο
+theme_group_light = Ανοιχτό
+theme_group_custom = Προσαρμοσμένο
+colors = Χρώματα
+preview = Προεπισκόπηση
+save_theme = Αποθήκευση Θέματος
+track_title = Τίτλος Κομματιού
+
+# Color Labels
+bg = Φόντο
+raised = Ανασηκωμένη επιφάνεια
+surface = Επιφάνεια
+text = Κείμενο
+text-muted = Αχνό Κείμενο
+accent = Έμφαση
+accent-soft = Ήπια έμφαση
+accent-alt = Εναλλακτική έμφαση
+accent-deep = Έντονη έμφαση
+highlight = Επισήμανση
+highlight-dark = Σκούρα Επισήμανση
+progress = Μπάρα προόδου
+danger = Κίνδυνος
+move_to_folder = Μετακίνηση σε φάκελο
+no_folders_yet = Δεν υπάρχουν φάκελοι ακόμα.
+folder_name = Όνομα φακέλου...
+new_folder = Νέος φάκελος
+remove_from_folder = Αφαίρεση από φάκελο
+back_behavior = Συμπεριφορά κουμπιού Πίσω
+back_behavior_rewind = ΕΠΑΝΑΦΟΡΑ → ΠΡΟΗΓΟΥΜΕΝΟ
+back_behavior_always_prev = ΠΑΝΤΑ ΠΡΟΗΓΟΥΜΕΝΟ
