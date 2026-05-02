@@ -38,6 +38,11 @@
   <content_rating type="oars-1.1" />
 
   <releases>
+    <release version="0.4.5" date="2026-05-02">
+      <description>
+        <p>Eq, bug fixes and more translations</p>
+      </description>
+    </release>
     <release version="0.4.3" date="2026-04-30">
         <description>
             <p>Bug fixes and translations</p>

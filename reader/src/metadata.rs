@@ -85,7 +85,8 @@ pub fn extract_metadata(
         album: album_title,
         khz: properties.sample_rate().unwrap_or(0),
         bitrate: properties.bit_depth().unwrap_or(0),
-        duration: properties.duration().as_secs(),
+        duration: properties.duration().as_secs()
+            + u64::from(properties.duration().subsec_nanos() > 0),
         track_number: tag.and_then(|t| t.track()),
         disc_number: tag.and_then(|t| t.disk()),
         musicbrainz_release_id,

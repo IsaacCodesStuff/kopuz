@@ -663,6 +663,7 @@ impl Player {
         {
             let mut st = self.state.lock().unwrap_or_else(|e| e.into_inner());
             st.seek_to = Some(time);
+            st.finished = false;
             self.position_micros
                 .store(time.as_micros() as u64, Ordering::Relaxed);
 
@@ -831,9 +832,7 @@ impl Player {
                 .create_biquad_filter()
                 .expect("BiquadFilterNode creation failed");
             filter.set_type(web_sys::BiquadFilterType::Peaking);
-            filter
-                .frequency()
-                .set_value(WEB_EQ_BAND_FREQUENCIES[index]);
+            filter.frequency().set_value(WEB_EQ_BAND_FREQUENCIES[index]);
             filter.q().set_value(WEB_EQ_BAND_Q[index]);
             filter.gain().set_value(0.0);
             filter

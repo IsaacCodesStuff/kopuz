@@ -411,7 +411,7 @@ pub fn use_player_task(mut ctrl: PlayerController) {
                     }
 
                     let should_skip = ctrl.player.read().is_playback_complete()
-                        || (duration > 0 && pos.as_secs() >= duration);
+                        || (duration > 0 && pos.as_secs() >= duration + 5);
 
                     if should_skip && !*ctrl.is_loading.read() && !*ctrl.skip_in_progress.read() {
                         ctrl.skip_in_progress.set(true);

@@ -53,6 +53,8 @@ rustPlatform.buildRustPackage {
     dbus
     yt-dlp
     libopus
+  ] ++ lib.optionals stdenv.isDarwin [
+    libopus
   ] ++ extraBuildInputs;
 
   doCheck = false;
