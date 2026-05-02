@@ -156,6 +156,110 @@ pub enum BackBehavior {
     AlwaysPrev,
 }
 
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Default)]
+pub enum EqPreset {
+    #[default]
+    Flat,
+    BassBoost,
+    TrebleBoost,
+    VocalBoost,
+    Loudness,
+    Custom,
+}
+
+impl EqPreset {
+    pub const fn all() -> [Self; 6] {
+        [
+            Self::Flat,
+            Self::BassBoost,
+            Self::TrebleBoost,
+            Self::VocalBoost,
+            Self::Loudness,
+            Self::Custom,
+        ]
+    }
+
+    pub const fn as_storage(self) -> &'static str {
+        match self {
+            Self::Flat => "flat",
+            Self::BassBoost => "bass-boost",
+            Self::TrebleBoost => "treble-boost",
+            Self::VocalBoost => "vocal-boost",
+            Self::Loudness => "loudness",
+            Self::Custom => "custom",
+        }
+    }
+
+    pub const fn label(self) -> &'static str {
+        match self {
+            Self::Flat => "Flat",
+            Self::BassBoost => "Bass Boost",
+            Self::TrebleBoost => "Treble Boost",
+            Self::VocalBoost => "Vocal Boost",
+            Self::Loudness => "Loudness",
+            Self::Custom => "Custom",
+        }
+    }
+
+    pub fn from_storage(value: &str) -> Self {
+        match value {
+            "bass-boost" => Self::BassBoost,
+            "treble-boost" => Self::TrebleBoost,
+            "vocal-boost" => Self::VocalBoost,
+            "loudness" => Self::Loudness,
+            "custom" => Self::Custom,
+            _ => Self::Flat,
+        }
+    }
+
+    pub const fn gains(self) -> [f32; 5] {
+        match self {
+            Self::Flat | Self::Custom => [0.0, 0.0, 0.0, 0.0, 0.0],
+            Self::BassBoost => [6.0, 4.5, 2.0, -0.5, -1.5],
+            Self::TrebleBoost => [-1.5, -0.5, 0.5, 4.0, 6.0],
+            Self::VocalBoost => [-2.0, 0.5, 3.5, 2.5, -0.5],
+            Self::Loudness => [4.0, 2.0, 0.5, 2.5, 4.0],
+        }
+    }
+}
+
+fn default_eq_bands() -> [f32; 5] {
+    [0.0, 0.0, 0.0, 0.0, 0.0]
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct EqualizerSettings {
+    #[serde(default)]
+    pub enabled: bool,
+    #[serde(default)]
+    pub preset: EqPreset,
+    #[serde(default = "default_eq_bands")]
+    pub bands: [f32; 5],
+    #[serde(default)]
+    pub preamp_db: f32,
+}
+
+impl EqualizerSettings {
+    pub fn resolved_bands(&self) -> [f32; 5] {
+        if self.preset == EqPreset::Custom {
+            self.bands
+        } else {
+            self.preset.gains()
+        }
+    }
+}
+
+impl Default for EqualizerSettings {
+    fn default() -> Self {
+        Self {
+            enabled: false,
+            preset: EqPreset::Flat,
+            bands: default_eq_bands(),
+            preamp_db: 0.0,
+        }
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AppConfig {
     #[serde(default)]
@@ -196,6 +300,8 @@ pub struct AppConfig {
     pub custom_themes: HashMap<String, CustomTheme>,
     #[serde(default)]
     pub back_behavior: BackBehavior,
+    #[serde(default)]
+    pub equalizer: EqualizerSettings,
     #[serde(default)]
     pub ytdlp_output_dir: String,
     #[serde(default)]
@@ -320,6 +426,7 @@ impl Default for AppConfig {
             volume: default_volume(),
             custom_themes: HashMap::new(),
             back_behavior: BackBehavior::RewindThenPrev,
+            equalizer: EqualizerSettings::default(),
             ytdlp_output_dir: String::new(),
             ytdlp_options: YtdlpOptions::default(),
             ytdlp_history: Vec::new(),

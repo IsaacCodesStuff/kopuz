@@ -3,6 +3,9 @@ name = "player"
 version = "0.3.6"
 edition = "2024"
 
+[dependencies]
+config = { workspace = true }
+
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 cpal = { workspace = true }
 symphonia = { workspace = true }

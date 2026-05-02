@@ -1,15 +1,18 @@
 use crate::theme_editor::ThemeEditorPage;
 use ::server::provider::ProviderClient;
 use components::settings_items::{
-    BackBehaviorSelector, DiscordPresenceSettings, LanguageSelector, MultiDirectoryPicker,
-    MusicBrainzSettings, ServerSettings, SettingItem, ThemeSelector, ToggleSetting,
+    BackBehaviorSelector, DiscordPresenceSettings, EqualizerPanel, LanguageSelector,
+    MultiDirectoryPicker, MusicBrainzSettings, ServerSettings, SettingItem, ThemeSelector,
+    ToggleSetting,
 };
 use components::settings_popups::{AddServerPopup, LoginPopup};
 use config::{AppConfig, MusicService};
 use dioxus::prelude::*;
+use hooks::use_player_controller::PlayerController;
 
 #[component]
 pub fn Settings(config: Signal<AppConfig>) -> Element {
+    let mut ctrl = use_context::<PlayerController>();
     let mut show_add_server = use_signal(|| false);
     let mut show_login = use_signal(|| false);
 
@@ -231,6 +234,29 @@ pub fn Settings(config: Signal<AppConfig>) -> Element {
                         //         }
                         //     }
                         // }
+                    }
+                }
+
+                section {
+                    h2 {
+                        class: "text-lg font-semibold text-white/80 mb-4 border-b border-white/5 pb-2",
+                        "{i18n::t(\"player_settings\")}"
+                    }
+
+                    div { class: "space-y-4",
+                        div { class: "py-2",
+                            p { class: "text-white font-medium mb-3", "{i18n::t(\"equalizer\")}" }
+                            EqualizerPanel {
+                                current: config.read().equalizer.clone(),
+                                on_preview: move |equalizer: config::EqualizerSettings| {
+                                    ctrl.player.write().set_equalizer(equalizer);
+                                },
+                                on_commit: move |equalizer: config::EqualizerSettings| {
+                                    config.write().equalizer = equalizer.clone();
+                                    ctrl.player.write().set_equalizer(equalizer);
+                                }
+                            }
+                        }
                     }
                 }
 

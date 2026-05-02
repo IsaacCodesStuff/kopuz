@@ -38,7 +38,11 @@ pub fn extract_metadata(
             if !from_tag.is_empty() {
                 from_tag
             } else if artist.contains(';') {
-                artist.split(';').map(|a| a.trim().to_string()).filter(|s| !s.is_empty()).collect()
+                artist
+                    .split(';')
+                    .map(|a| a.trim().to_string())
+                    .filter(|s| !s.is_empty())
+                    .collect()
             } else {
                 vec![artist.clone()]
             }

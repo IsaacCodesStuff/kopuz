@@ -271,9 +271,8 @@ impl SubsonicClient {
         ordered_song_ids: &[&str],
         total_tracks: usize,
     ) -> Result<(), String> {
-        let mut params: Vec<(String, String)> = vec![
-            ("playlistId".to_string(), playlist_id.to_string()),
-        ];
+        let mut params: Vec<(String, String)> =
+            vec![("playlistId".to_string(), playlist_id.to_string())];
         for i in 0..total_tracks {
             params.push(("songIndexToRemove".to_string(), i.to_string()));
         }

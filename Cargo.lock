@@ -4607,6 +4607,7 @@ name = "player"
 version = "0.3.6"
 dependencies = [
  "block2",
+ "config",
  "cpal",
  "mpris-server",
  "objc2",
