@@ -199,6 +199,7 @@ fn App() -> Element {
     #[cfg(not(target_arch = "wasm32"))]
     let _ = std::fs::create_dir_all(cover_cache());
     let mut trigger_rescan = use_signal(|| 0);
+    let mut scan_current_file = use_signal(|| Option::<String>::None);
     let current_playing = use_signal(|| 0);
     let mut player = use_signal(Player::new);
     let current_song_cover_url = use_signal(String::new);
@@ -530,10 +531,30 @@ fn App() -> Element {
             }
 
             if !configured_dirs.is_empty() {
+                scan_current_file.set(Some(String::new()));
+
+                let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel::<String>();
+                spawn(async move {
+                    while let Some(file) = rx.recv().await {
+                        scan_current_file.set(Some(file));
+                    }
+                    scan_current_file.set(None);
+                });
+
+                let progress_cb: std::sync::Arc<dyn Fn(String) + Send + Sync> =
+                    std::sync::Arc::new(move |file: String| {
+                        let _ = tx.send(file);
+                    });
                 for dir in &scannable_dirs {
-                    let _ =
-                        reader::scan_directory(dir.clone(), cover_cache(), &mut current_lib).await;
+                    let _ = reader::scan_directory(
+                        dir.clone(),
+                        cover_cache(),
+                        &mut current_lib,
+                        progress_cb.clone(),
+                    )
+                    .await;
                 }
+                drop(progress_cb);
 
                 current_lib.tracks.retain(|t| {
                     let in_configured_root = configured_dirs.iter().any(|d| t.path.starts_with(d));
@@ -658,6 +679,29 @@ fn App() -> Element {
             },
             if cfg!(target_os = "linux") {
                 div { dir: "ltr", Titlebar {} }
+            }
+            if config.read().active_source == config::MusicSource::Local {
+                if let Some(file) = scan_current_file.read().clone() {
+                    div {
+                        class: "flex-shrink-0",
+                        div {
+                            class: "h-[2px] bg-white/5 overflow-hidden",
+                            div { class: "h-full w-1/4 bg-[var(--color-primary,#6366f1)] animate-scan" }
+                        }
+                        div {
+                            class: "px-3 py-[3px] flex items-center gap-2 bg-black/30 border-b border-white/5",
+                            i { class: "fa-solid fa-compact-disc fa-spin text-[9px] text-white/30 flex-shrink-0" }
+                            span {
+                                class: "text-[10px] text-white/35 font-mono truncate",
+                                if file.is_empty() {
+                                    "Scanning library…"
+                                } else {
+                                    "{file}"
+                                }
+                            }
+                        }
+                    }
+                }
             }
             div {
                 class: "{content_row_class}",

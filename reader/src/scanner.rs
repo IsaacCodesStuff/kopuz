@@ -3,15 +3,17 @@ use super::models::Library;
 use async_recursion::async_recursion;
 use std::collections::HashSet;
 use std::path::{Path, PathBuf};
+use std::sync::Arc;
 use tokio::fs;
 
 pub async fn scan_directory(
     dir: PathBuf,
     cover_cache: PathBuf,
     library: &mut Library,
+    on_progress: Arc<dyn Fn(String) + Send + Sync>,
 ) -> std::io::Result<()> {
     let existing_paths: HashSet<PathBuf> = library.tracks.iter().map(|t| t.path.clone()).collect();
-    scan_directory_internal(dir, cover_cache, library, &existing_paths).await
+    scan_directory_internal(dir, cover_cache, library, &existing_paths, on_progress).await
 }
 
 #[async_recursion]
@@ -20,6 +22,7 @@ async fn scan_directory_internal(
     cover_cache: PathBuf,
     library: &mut Library,
     existing_paths: &HashSet<PathBuf>,
+    on_progress: Arc<dyn Fn(String) + Send + Sync>,
 ) -> std::io::Result<()> {
     let mut entries = match fs::read_dir(&dir).await {
         Ok(e) => e,
@@ -43,9 +46,13 @@ async fn scan_directory_internal(
     if !audio_files.is_empty() {
         let mut lib = std::mem::take(library);
         let cover_cache_clone = cover_cache.clone();
+        let progress = on_progress.clone();
 
         lib = tokio::task::spawn_blocking(move || {
             for path in audio_files {
+                if let Some(name) = path.file_name() {
+                    progress(name.to_string_lossy().into_owned());
+                }
                 read(&path, &cover_cache_clone, &mut lib);
             }
             lib
@@ -57,8 +64,14 @@ async fn scan_directory_internal(
     }
 
     for sub_dir in sub_dirs {
-        let _ =
-            scan_directory_internal(sub_dir, cover_cache.clone(), library, existing_paths).await;
+        let _ = scan_directory_internal(
+            sub_dir,
+            cover_cache.clone(),
+            library,
+            existing_paths,
+            on_progress.clone(),
+        )
+        .await;
     }
 
     Ok(())

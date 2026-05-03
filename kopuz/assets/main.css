@@ -1,4 +1,13 @@
 /* App-wide styling */
+
+@keyframes scan-slide {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(400%); }
+}
+
+.animate-scan {
+    animation: scan-slide 1.4s ease-in-out infinite;
+}
 @font-face {
     font-family: "nasin-nanpa";
     src: url("https://github.com/etbcor/nasin-nanpa/releases/download/n4.0.2/nasin-nanpa-4.0.2-UCSUR.otf");

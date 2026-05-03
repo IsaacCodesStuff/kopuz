@@ -38,7 +38,6 @@
     --color-black: #000;
     --color-white: #fff;
     --spacing: 0.25rem;
-    --container-xs: 20rem;
     --container-md: 28rem;
     --container-xl: 36rem;
     --container-2xl: 42rem;
@@ -503,6 +502,9 @@
   .h-64 {
     height: calc(var(--spacing) * 64);
   }
+  .h-\[2px\] {
+    height: 2px;
+  }
   .h-\[350px\] {
     height: 350px;
   }
@@ -635,6 +637,9 @@
   .min-w-0 {
     min-width: calc(var(--spacing) * 0);
   }
+  .min-w-\[220px\] {
+    min-width: 220px;
+  }
   .flex-1 {
     flex: 1;
   }
@@ -672,8 +677,14 @@
   .cursor-default {
     cursor: default;
   }
+  .cursor-grabbing {
+    cursor: grabbing;
+  }
   .cursor-pointer {
     cursor: pointer;
+  }
+  .cursor-row-resize {
+    cursor: row-resize;
   }
   .grid-cols-1 {
     grid-template-columns: repeat(1, minmax(0, 1fr));
@@ -904,6 +915,12 @@
       border-color: color-mix(in oklab, var(--color-white) 5%, transparent);
     }
   }
+  .border-white\/8 {
+    border-color: color-mix(in srgb, #fff 8%, transparent);
+    @supports (color: color-mix(in lab, red, red)) {
+      border-color: color-mix(in oklab, var(--color-white) 8%, transparent);
+    }
+  }
   .border-white\/10 {
     border-color: color-mix(in srgb, #fff 10%, transparent);
     @supports (color: color-mix(in lab, red, red)) {
@@ -927,6 +944,9 @@
     @supports (color: color-mix(in lab, red, red)) {
       border-color: color-mix(in oklab, var(--color-white) 40%, transparent);
     }
+  }
+  .bg-\[var\(--color-primary\,\#6366f1\)\] {
+    background-color: var(--color-primary,#6366f1);
   }
   .bg-black\/0 {
     background-color: color-mix(in srgb, #000 0%, transparent);
@@ -1206,6 +1226,9 @@
   .py-24 {
     padding-block: calc(var(--spacing) * 24);
   }
+  .py-\[3px\] {
+    padding-block: 3px;
+  }
   .pt-2 {
     padding-top: calc(var(--spacing) * 2);
   }
@@ -1350,6 +1373,10 @@
   .tracking-\[0\.2em\] {
     --tw-tracking: 0.2em;
     letter-spacing: 0.2em;
+  }
+  .tracking-\[0\.18em\] {
+    --tw-tracking: 0.18em;
+    letter-spacing: 0.18em;
   }
   .tracking-tight {
     --tw-tracking: var(--tracking-tight);
@@ -1550,6 +1577,11 @@
   }
   .filter {
     filter: var(--tw-blur,) var(--tw-brightness,) var(--tw-contrast,) var(--tw-grayscale,) var(--tw-hue-rotate,) var(--tw-invert,) var(--tw-saturate,) var(--tw-sepia,) var(--tw-drop-shadow,);
+  }
+  .transition {
+    transition-property: color, background-color, border-color, outline-color, text-decoration-color, fill, stroke, --tw-gradient-from, --tw-gradient-via, --tw-gradient-to, opacity, box-shadow, transform, translate, scale, rotate, filter, -webkit-backdrop-filter, backdrop-filter, display, content-visibility, overlay, pointer-events;
+    transition-timing-function: var(--tw-ease, var(--default-transition-timing-function));
+    transition-duration: var(--tw-duration, var(--default-transition-duration));
   }
   .transition-all {
     transition-property: all;
