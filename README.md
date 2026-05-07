@@ -109,7 +109,7 @@ You can also click on the file and open it with an app provider, for example KDE
 On Arch-based distros, if the AppImage crashes with a `WebKitNetworkProcess` error, either run it with:
 
 ```bash
-LD_LIBRARY_PATH=/usr/lib ./rusic_*.AppImage
+LD_LIBRARY_PATH=/usr/lib ./kopuz_*.AppImage
 ```
 
 Or create symlinks once (requires sudo):
