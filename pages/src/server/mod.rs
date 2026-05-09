@@ -17,24 +17,9 @@ use std::path::PathBuf;
 pub(super) fn offline_cache_dir() -> PathBuf {
     #[cfg(not(target_arch = "wasm32"))]
     {
-        // macOS: ~/Library/Caches/kopuz, Linux: XDG_CACHE_HOME/kopuz or ~/.cache/kopuz
-        #[cfg(target_os = "macos")]
-        let base = std::env::var("HOME")
-            .map(|h| {
-                PathBuf::from(h)
-                    .join("Library")
-                    .join("Caches")
-                    .join("kopuz")
-            })
-            .unwrap_or_else(|_| PathBuf::from("./cache/kopuz"));
-        #[cfg(not(target_os = "macos"))]
-        let base = std::env::var("XDG_CACHE_HOME")
-            .map(|p| PathBuf::from(p).join("kopuz"))
-            .unwrap_or_else(|_| {
-                std::env::var("HOME")
-                    .map(|h| PathBuf::from(h).join(".cache").join("kopuz"))
-                    .unwrap_or_else(|_| PathBuf::from("./cache/kopuz"))
-            });
+        let base = directories::ProjectDirs::from("com", "temidaradev", "kopuz")
+            .map(|dirs| dirs.cache_dir().to_path_buf())
+            .unwrap_or_else(|| PathBuf::from("./cache"));
         let dir = base.join("offline_tracks");
         let _ = std::fs::create_dir_all(&dir);
         dir

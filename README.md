@@ -176,6 +176,7 @@ On **macOS** everything lives under your Library folders:
 - `~/Library/Caches/com.temidaradev.kopuz/library.json` — the scanned library
 - `~/Library/Caches/com.temidaradev.kopuz/playlists.json` — your playlists
 - `~/Library/Caches/com.temidaradev.kopuz/covers/` — cached album art
+- `~/Library/Caches/com.temidaradev.kopuz/offline_tracks/` — downloaded tracks
 
 On **Linux** it follows the XDG spec like you'd expect:
 
@@ -183,6 +184,15 @@ On **Linux** it follows the XDG spec like you'd expect:
 - `~/.cache/kopuz/library.json` — the scanned library
 - `~/.cache/kopuz/playlists.json` — your playlists
 - `~/.cache/kopuz/covers/` — cached album art
+- `~/.cache/kopuz/offline_tracks/` — downloaded tracks
+
+On **Windows** it uses your AppData folder:
+
+- `%APPDATA%\temidaradev\kopuz\config\config.json` — your settings
+- `%LOCALAPPDATA%\temidaradev\kopuz\cache\library.json` — the scanned library
+- `%LOCALAPPDATA%\temidaradev\kopuz\cache\playlists.json` — your playlists
+- `%LOCALAPPDATA%\temidaradev\kopuz\cache\covers\` — cached album art
+- `%LOCALAPPDATA%\temidaradev\kopuz\cache\offline_tracks\` — downloaded tracks
 
 If covers aren't showing or the library looks off, just delete the cache folder and hit rescan.
 

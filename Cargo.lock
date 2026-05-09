@@ -4358,6 +4358,7 @@ dependencies = [
  "components",
  "config",
  "dioxus",
+ "directories",
  "hooks",
  "i18n",
  "kopuz_route",
