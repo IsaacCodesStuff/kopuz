@@ -7,9 +7,10 @@
       url = "github:oxalica/rust-overlay";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    crane.url = "github:ipetkov/crane";
   };
 
-  outputs = { self, nixpkgs, rust-overlay }:
+  outputs = { self, nixpkgs, rust-overlay, crane }:
     let
       systems = [ "x86_64-linux" "aarch64-linux" "x86_64-darwin" "aarch64-darwin" ];
       forAllSystems = nixpkgs.lib.genAttrs systems;
@@ -67,6 +68,10 @@
       packages = forAllSystems (system:
         let
           pkgs = nixpkgsFor.${system};
+          rustToolchain = pkgs.rust-bin.stable.latest.default.override {
+            extensions = [ "rust-src" "rust-analyzer" ];
+          };
+          craneLib = (crane.mkLib pkgs).overrideToolchain rustToolchain;
           filteredSrc = pkgs.lib.cleanSourceWith {
             src = ./.;
             filter = path: type:
@@ -79,9 +84,9 @@
           };
         in
         {
-          default = pkgs.callPackage ./nix/package.nix {
+          default = pkgs.callPackage ./nix/crane.nix {
+            inherit craneLib;
             src = filteredSrc;
-            extraBuildInputs = [];
           };
         }
       );

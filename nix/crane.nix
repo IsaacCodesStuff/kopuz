@@ -1,15 +1,14 @@
 { lib
 , stdenv
-, rustPlatform
+, craneLib
+, src
 , pkg-config
 , cmake
 , openssl
 , tailwindcss_4
 , dioxus-cli
 , yt-dlp
-, fetchFromGitHub
 , libopus
-# Linux only
 , wrapGAppsHook3 ? null
 , webkitgtk_4_1 ? null
 , gtk3 ? null
@@ -21,28 +20,16 @@
 , dbus ? null
 }:
 
-rustPlatform.buildRustPackage rec {
+let
   pname = "kopuz";
   version = "0.5.0";
-
-  src = fetchFromGitHub {
-    owner = "temidaradev";
-    repo = "kopuz";
-    rev = "v${version}";
-    hash = "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
-  };
-
-  useFetchCargoVendor = true;
-  cargoHash = "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
 
   nativeBuildInputs = [
     pkg-config
     cmake
     tailwindcss_4
     dioxus-cli
-  ] ++ lib.optionals stdenv.isLinux [
-    wrapGAppsHook3
-  ];
+  ] ++ lib.optionals stdenv.isLinux [ wrapGAppsHook3 ];
 
   buildInputs = lib.optionals stdenv.isLinux [
     webkitgtk_4_1
@@ -54,22 +41,29 @@ rustPlatform.buildRustPackage rec {
     xdotool
     wayland
     dbus
-    yt-dlp
     libopus
   ] ++ lib.optionals stdenv.isDarwin [
     libopus
   ];
 
-  doCheck = false;
+  commonArgs = {
+    inherit src pname version nativeBuildInputs buildInputs;
+    strictDeps = true;
+    doCheck = false;
+  };
 
-  buildPhase = ''
-    runHook preBuild
+  # Pre-build all external deps — this derivation is cached across source changes
+  cargoArtifacts = craneLib.buildDepsOnly commonArgs;
 
+in craneLib.mkCargoDerivation (commonArgs // {
+  inherit cargoArtifacts;
+
+  buildPhaseCargoCommand = ''
     tailwindcss -i tailwind.css -o kopuz/assets/tailwind.css --minify
 
     ${lib.optionalString stdenv.isDarwin ''
       mkdir -p "$TMPDIR/fake-bin"
-      cat > "$TMPDIR/fake-bin/codesign" << 'CODESIGN_EOF'
+      cat > "$TMPDIR/fake-bin/codesign" <<'CODESIGN_EOF'
 #!/bin/sh
 exec true
 CODESIGN_EOF
@@ -78,8 +72,6 @@ CODESIGN_EOF
     ''}
 
     dx build --release --platform desktop -p kopuz --offline --frozen
-
-    runHook postBuild
   '';
 
   installPhase = ''
@@ -101,9 +93,7 @@ CODESIGN_EOF
       install -Dm644 kopuz/assets/logo.png \
         $out/share/icons/hicolor/256x256/apps/com.temidaradev.kopuz.png
     '' else ''
-      # Dioxus outputs the bundle at macos/Kopuz.app (capitalised, no app/ subdir)
       cp -r target/dx/kopuz/release/macos/Kopuz.app $out/bin/kopuz.app
-      # Symlink whatever binary dioxus placed in MacOS/ (name may differ in case)
       macBin=$(find $out/bin/kopuz.app/Contents/MacOS -maxdepth 1 -type f | head -1)
       ln -s "$macBin" $out/bin/kopuz
     ''}
@@ -126,4 +116,4 @@ CODESIGN_EOF
     platforms = lib.platforms.linux ++ lib.platforms.darwin;
     mainProgram = "kopuz";
   };
-}
+})

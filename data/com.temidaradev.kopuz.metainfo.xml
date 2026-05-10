@@ -4,7 +4,7 @@
   <metadata_license>CC0-1.0</metadata_license>
   <project_license>MIT</project_license>
   <name>Kopuz</name>
-  <summary>A modern, gud music player</summary>
+  <summary>Fast, modern music player with local library and Jellyfin support</summary>
 
   <developer id="com.temidaradev">
     <name>temidaradev</name>
@@ -38,6 +38,11 @@
   <content_rating type="oars-1.1" />
 
   <releases>
+    <release version="0.5.0" date="2026-05-10">
+      <description>
+        <p>EQ improvements and additional features</p>
+      </description>
+    </release>
     <release version="0.4.5" date="2026-05-02">
       <description>
         <p>Eq, bug fixes and more translations</p>
