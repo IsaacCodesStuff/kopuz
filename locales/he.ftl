@@ -293,3 +293,10 @@ ytdlp_status_waiting = ממתין…
 ytdlp_error_not_found = yt-dlp לא נמצא ב-PATH. ניתן להתקין דרך: https://github.com/yt-dlp/yt-dlp
 ytdlp_error_start = נכשל בהפעלת yt-dlp: { $error }
 ytdlp_error_exit = yt-dlp סיים: { $status }
+
+channel_mode = מצב ערוץ
+channel_mode_stereo = סטריאו
+channel_mode_mono = מונו
+channel_mode_left_only = שמאל בלבד
+channel_mode_right_only = ימין בלבד
+channel_mode_swap_left_right = החלף ש/י

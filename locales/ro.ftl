@@ -293,3 +293,10 @@ ytdlp_status_waiting = Se Așteaptă…
 ytdlp_error_not_found = yt-dlp nu a fost găsit în sistemul PATH. Instalați yt-dlp: https://github.com/yt-dlp/yt-dlp
 ytdlp_error_start = yt-dlp nu s-a pornit: { $error }
 ytdlp_error_exit = yt-dlp a ieșit: { $status }
+
+channel_mode = Mod canal
+channel_mode_stereo = Stereo
+channel_mode_mono = Mono
+channel_mode_left_only = Doar stânga
+channel_mode_right_only = Doar dreapta
+channel_mode_swap_left_right = Inversare S/D

@@ -292,3 +292,10 @@ remove_from_folder = Hapus dari Folder
 back_behavior = Perilaku Tombol Kembali
 back_behavior_rewind = MUNDUR → SEBELUMNYA
 back_behavior_always_prev = SELALU SEBELUMNYA
+
+channel_mode = Mode Kanal
+channel_mode_stereo = Stereo
+channel_mode_mono = Mono
+channel_mode_left_only = Hanya kiri
+channel_mode_right_only = Hanya kanan
+channel_mode_swap_left_right = Tukar Kiri/Kanan

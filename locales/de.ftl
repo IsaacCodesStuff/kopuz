@@ -293,3 +293,10 @@ ytdlp_status_waiting = Warten…
 ytdlp_error_not_found = yt-dlp im PATH nicht gefunden. Installieren: https://github.com/yt-dlp/yt-dlp
 ytdlp_error_start = yt-dlp konnte nicht gestartet werden: { $error }
 ytdlp_error_exit = yt-dlp beendet: { $status }
+
+channel_mode = Kanalmodus
+channel_mode_stereo = Stereo
+channel_mode_mono = Mono
+channel_mode_left_only = Nur links
+channel_mode_right_only = Nur rechts
+channel_mode_swap_left_right = L/R tauschen

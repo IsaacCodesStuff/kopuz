@@ -294,3 +294,10 @@ back_behavior = Comportement du bouton Retour
 back_behavior_rewind = REMBOBINER → PRÉCÉDENT
 back_behavior_always_prev = TOUJOURS PRÉCÉDENT
 folder_playlist = Dossier
+
+channel_mode = Mode de canal
+channel_mode_stereo = Stéréo
+channel_mode_mono = Mono
+channel_mode_left_only = Gauche uniquement
+channel_mode_right_only = Droite uniquement
+channel_mode_swap_left_right = Inverser G/D

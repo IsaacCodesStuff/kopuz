@@ -293,3 +293,10 @@ ytdlp_status_waiting = o awen...
 ytdlp_error_not_found = ilo yt-dlp li lon ala. o toki lipu: https://github.com/yt-dlp/yt-dlp
 ytdlp_error_start = yt-dlp li ike open: { $error }
 ytdlp_error_exit = yt-dlp li weka: { $status }
+
+channel_mode = nasin kalama
+channel_mode_stereo = kalama tu
+channel_mode_mono = kalama wan
+channel_mode_left_only = poka soto taso
+channel_mode_right_only = poka teje taso
+channel_mode_swap_left_right = ante soto teje

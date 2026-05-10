@@ -13,6 +13,58 @@ fn db_to_linear(db: f32) -> f32 {
     10.0_f32.powf(db / 20.0)
 }
 
+fn apply_channel_mode_to_frame(frame: &mut [f32], mode: ChannelMode) {
+    if frame.len() < 2 {
+        return;
+    }
+
+    let left = frame[0];
+    let right = frame[1];
+
+    match mode {
+        ChannelMode::Stereo => {}
+        ChannelMode::Mono => {
+            let mixed = (left + right) * 0.5;
+            frame[0] = mixed;
+            frame[1] = mixed;
+            for sample in &mut frame[2..] {
+                *sample = 0.0;
+            }
+        }
+        ChannelMode::LeftOnly => {
+            frame[0] = left;
+            frame[1] = 0.0;
+            for sample in &mut frame[2..] {
+                *sample = 0.0;
+            }
+        }
+        ChannelMode::RightOnly => {
+            frame[0] = 0.0;
+            frame[1] = right;
+            for sample in &mut frame[2..] {
+                *sample = 0.0;
+            }
+        }
+        ChannelMode::SwapLeftRight => {
+            frame[0] = right;
+            frame[1] = left;
+            for sample in &mut frame[2..] {
+                *sample = 0.0;
+            }
+        }
+    }
+}
+
+fn apply_channel_mode_in_place(samples: &mut [f32], channels: usize, mode: ChannelMode) {
+    if matches!(mode, ChannelMode::Stereo) || channels < 2 {
+        return;
+    }
+
+    for frame in samples.chunks_exact_mut(channels.max(1)) {
+        apply_channel_mode_to_frame(frame, mode);
+    }
+}
+
 #[cfg(target_arch = "wasm32")]
 const WEB_EQ_BAND_FREQUENCIES: [f32; 5] = [60.0, 250.0, 1_000.0, 4_000.0, 12_000.0];
 #[cfg(target_arch = "wasm32")]
@@ -22,7 +74,7 @@ const WEB_EQ_BAND_Q: [f32; 5] = [0.9, 1.0, 1.0, 0.9, 0.8];
 use crate::eq::Equalizer;
 #[cfg(not(target_arch = "wasm32"))]
 use crate::systemint;
-use config::EqualizerSettings;
+use config::{ChannelMode, EqualizerSettings};
 #[cfg(not(target_arch = "wasm32"))]
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 #[cfg(not(target_arch = "wasm32"))]
@@ -75,6 +127,7 @@ pub struct Player {
     position_thread_handle: Option<std::thread::JoinHandle<()>>,
     position_thread_stop: Arc<AtomicBool>,
     equalizer: Arc<Mutex<Equalizer>>,
+    channel_mode: Arc<Mutex<ChannelMode>>,
 }
 
 #[cfg(not(target_arch = "wasm32"))]
@@ -94,6 +147,7 @@ impl Player {
             stream_config.sample_rate,
             stream_config.channels as usize,
         )));
+        let channel_mode = Arc::new(Mutex::new(ChannelMode::Stereo));
 
         Self {
             state: Arc::new(Mutex::new(PlaybackState {
@@ -115,6 +169,7 @@ impl Player {
             position_thread_handle: None,
             position_thread_stop: Arc::default(),
             equalizer,
+            channel_mode,
         }
     }
 
@@ -160,6 +215,7 @@ impl Player {
         let stream_consumer = consumer.clone();
         let stream_position = position_micros.clone();
         let stream_equalizer = self.equalizer.clone();
+        let stream_channel_mode = self.channel_mode.clone();
 
         let host = cpal::default_host();
         let device = host
@@ -190,6 +246,11 @@ impl Player {
                         if let Ok(mut eq) = stream_equalizer.lock() {
                             eq.process_in_place(&mut data[..read]);
                         }
+                        let channel_mode = stream_channel_mode
+                            .lock()
+                            .map(|mode| *mode)
+                            .unwrap_or(ChannelMode::Stereo);
+                        apply_channel_mode_in_place(&mut data[..read], channels, channel_mode);
                     }
 
                     stream_position.fetch_add(
@@ -738,6 +799,12 @@ impl Player {
         st.volume = volume;
     }
 
+    pub fn set_channel_mode(&mut self, mode: ChannelMode) {
+        if let Ok(mut channel_mode) = self.channel_mode.lock() {
+            *channel_mode = mode;
+        }
+    }
+
     pub fn set_equalizer(&mut self, settings: EqualizerSettings) {
         if let Ok(mut eq) = self.equalizer.lock() {
             eq.set_settings(settings);
@@ -820,6 +887,10 @@ pub struct Player {
     _source_node: web_sys::MediaElementAudioSourceNode,
     preamp_node: web_sys::GainNode,
     eq_filters: [web_sys::BiquadFilterNode; 5],
+    _channel_splitter: web_sys::ChannelSplitterNode,
+    _channel_merger: web_sys::ChannelMergerNode,
+    routing_gains: [[web_sys::GainNode; 2]; 2],
+    channel_mode: ChannelMode,
     volume: f32,
     /// True once play_url has been called and not yet stopped
     has_source: bool,
@@ -845,6 +916,12 @@ impl Player {
             filter.gain().set_value(0.0);
             filter
         });
+        let channel_splitter = audio_context
+            .create_channel_splitter_with_number_of_outputs(2)
+            .expect("ChannelSplitterNode creation failed");
+        let channel_merger = audio_context
+            .create_channel_merger_with_number_of_inputs(2)
+            .expect("ChannelMergerNode creation failed");
 
         let media_element: web_sys::HtmlMediaElement = audio.clone().unchecked_into();
         let source_node = audio_context
@@ -863,6 +940,25 @@ impl Player {
             previous = filter.clone().unchecked_into();
         }
         previous
+            .connect_with_audio_node(&channel_splitter)
+            .expect("EQ -> channel splitter connection failed");
+
+        let routing_gains = std::array::from_fn(|src| {
+            std::array::from_fn(|dst| {
+                let gain = audio_context
+                    .create_gain()
+                    .expect("channel routing GainNode creation failed");
+                gain.gain().set_value(0.0);
+                channel_splitter
+                    .connect_with_audio_node_and_output(&gain, src as u32)
+                    .expect("channel splitter -> routing gain connection failed");
+                gain.connect_with_audio_node_and_output_and_input(&channel_merger, 0, dst as u32)
+                    .expect("routing gain -> channel merger connection failed");
+                gain
+            })
+        });
+
+        channel_merger
             .connect_with_audio_node(&audio_context.destination())
             .expect("destination connection failed");
 
@@ -872,9 +968,14 @@ impl Player {
             _source_node: source_node,
             preamp_node,
             eq_filters,
+            _channel_splitter: channel_splitter,
+            _channel_merger: channel_merger,
+            routing_gains,
+            channel_mode: ChannelMode::Stereo,
             volume: 1.0,
             has_source: false,
         };
+        player.set_channel_mode(ChannelMode::Stereo);
         player.set_equalizer(EqualizerSettings::default());
         player
     }
@@ -922,6 +1023,11 @@ impl Player {
         self.audio.set_volume(volume as f64);
     }
 
+    pub fn set_channel_mode(&mut self, mode: ChannelMode) {
+        self.channel_mode = mode;
+        self.update_channel_routing();
+    }
+
     pub fn set_equalizer(&mut self, settings: EqualizerSettings) {
         let resolved_bands = if settings.enabled {
             settings.resolved_bands()
@@ -943,6 +1049,22 @@ impl Player {
 
         for (index, filter) in self.eq_filters.iter().enumerate() {
             filter.gain().set_value(resolved_bands[index]);
+        }
+    }
+
+    fn update_channel_routing(&self) {
+        let gains = match self.channel_mode {
+            ChannelMode::Stereo => [[1.0, 0.0], [0.0, 1.0]],
+            ChannelMode::Mono => [[0.5, 0.5], [0.5, 0.5]],
+            ChannelMode::LeftOnly => [[1.0, 0.0], [0.0, 0.0]],
+            ChannelMode::RightOnly => [[0.0, 0.0], [0.0, 1.0]],
+            ChannelMode::SwapLeftRight => [[0.0, 1.0], [1.0, 0.0]],
+        };
+
+        for (src, outputs) in self.routing_gains.iter().enumerate() {
+            for (dst, gain) in outputs.iter().enumerate() {
+                gain.gain().set_value(gains[src][dst]);
+            }
         }
     }
 

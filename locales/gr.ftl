@@ -293,3 +293,10 @@ ytdlp_status_waiting = Αναμονή…
 ytdlp_error_not_found = Το yt-dlp δεν βρέθηκε. Εγκαταστήστε το: https://github.com/yt-dlp/yt-dlp
 ytdlp_error_start = Αποτυχία εκκίνησης yt-dlp: { $error }
 ytdlp_error_exit = Το yt-dlp τερματίστηκε: { $status }
+
+channel_mode = Λειτουργία καναλιού
+channel_mode_stereo = Στέρεο
+channel_mode_mono = Μονοφωνικό
+channel_mode_left_only = Μόνο αριστερά
+channel_mode_right_only = Μόνο δεξιά
+channel_mode_swap_left_right = Εναλλαγή Α/Δ

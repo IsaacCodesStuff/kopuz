@@ -299,3 +299,10 @@ ytdlp_status_waiting = قيد الانتظار...
 ytdlp_error_not_found = لم يتم العثور على yt-dlp في PATH. قم بتثبيته: https://github.com/yt-dlp/yt-dlp
 ytdlp_error_start = فشل بدء yt-dlp: { $error }
 ytdlp_error_exit = خرج yt-dlp: { $status }
+
+channel_mode = وضع القناة
+channel_mode_stereo = ستيريو
+channel_mode_mono = أحادي
+channel_mode_left_only = الأيسر فقط
+channel_mode_right_only = الأيمن فقط
+channel_mode_swap_left_right = تبديل اليسار/اليمين

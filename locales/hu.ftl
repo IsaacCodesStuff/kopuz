@@ -293,3 +293,10 @@ ytdlp_status_waiting = Várakozás…
 ytdlp_error_not_found = Az yt-dlp nem található a PATH-ban. Telepítés: https://github.com/yt-dlp/yt-dlp
 ytdlp_error_start = Nem sikerült elindítani az yt-dlp-t: { $error }
 ytdlp_error_exit = Az yt-dlp kilépett: { $status }
+
+channel_mode = Csatorna mód
+channel_mode_stereo = Sztereó
+channel_mode_mono = Monó
+channel_mode_left_only = Csak bal
+channel_mode_right_only = Csak jobb
+channel_mode_swap_left_right = B/J felcserélése

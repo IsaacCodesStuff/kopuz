@@ -293,3 +293,10 @@ ytdlp_status_waiting = 대기 중…
 ytdlp_error_not_found = PATH에서 yt-dlp를 찾을 수 없습니다. 설치: https://github.com/yt-dlp/yt-dlp
 ytdlp_error_start = yt-dlp 시작 실패: { $error }
 ytdlp_error_exit = yt-dlp 종료됨: { $status }
+
+channel_mode = 채널 모드
+channel_mode_stereo = 스테레오
+channel_mode_mono = 모노
+channel_mode_left_only = 왼쪽만
+channel_mode_right_only = 오른쪽만
+channel_mode_swap_left_right = L/R 스왑

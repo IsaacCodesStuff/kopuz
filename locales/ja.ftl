@@ -299,3 +299,10 @@ ytdlp_status_waiting = 待機中…
 ytdlp_error_not_found = PATH に yt-dlp が見つかりませんでした。インストールしてください: https://github.com/yt-dlp/yt-dlp
 ytdlp_error_start = yt-dlp の起動に失敗しました: { $error }
 ytdlp_error_exit = yt-dlp が終了しました: { $status }
+
+channel_mode = チャンネルモード
+channel_mode_stereo = ステレオ
+channel_mode_mono = モノラル
+channel_mode_left_only = 左のみ
+channel_mode_right_only = 右のみ
+channel_mode_swap_left_right = 左右を入れ替え

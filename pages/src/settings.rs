@@ -1,9 +1,9 @@
 use crate::theme_editor::ThemeEditorPage;
 use ::server::provider::ProviderClient;
 use components::settings_items::{
-    BackBehaviorSelector, DiscordPresenceSettings, EqualizerPanel, LanguageSelector,
-    MultiDirectoryPicker, MusicBrainzSettings, ServerSettings, SettingItem, ThemeSelector,
-    ToggleSetting,
+    BackBehaviorSelector, ChannelModeSelector, DiscordPresenceSettings, EqualizerPanel,
+    LanguageSelector, MultiDirectoryPicker, MusicBrainzSettings, ServerSettings, SettingItem,
+    ThemeSelector, ToggleSetting,
 };
 use components::settings_popups::{AddServerPopup, LoginPopup};
 use config::{AppConfig, MusicService, OfflineQuality};
@@ -298,6 +298,18 @@ pub fn Settings(config: Signal<AppConfig>) -> Element {
                     }
 
                     div { class: "space-y-4",
+                        SettingItem {
+                            title: i18n::t("channel_mode").to_string(),
+                            control: rsx! {
+                                ChannelModeSelector {
+                                    current: config.read().channel_mode,
+                                    on_change: move |mode| {
+                                        config.write().channel_mode = mode;
+                                        ctrl.player.write().set_channel_mode(mode);
+                                    }
+                                }
+                            }
+                        }
                         div { class: "py-2",
                             p { class: "text-white font-medium mb-3", "{i18n::t(\"equalizer\")}" }
                             EqualizerPanel {

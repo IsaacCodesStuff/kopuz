@@ -293,3 +293,10 @@ ytdlp_status_waiting = Очікування...
 ytdlp_error_not_found = yt-dlp не знайдено у PATH. Встановіть його: https://github.com/yt-dlp/yt-dlp
 ytdlp_error_start = Помилка запуску yt-dlp: { $error }
 ytdlp_error_exit = yt-dlp завершив роботу: { $status }
+
+channel_mode = Режим каналу
+channel_mode_stereo = Стерео
+channel_mode_mono = Моно
+channel_mode_left_only = Лише лівий
+channel_mode_right_only = Лише правий
+channel_mode_swap_left_right = Поміняти Л/П

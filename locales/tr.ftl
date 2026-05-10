@@ -293,3 +293,10 @@ ytdlp_status_waiting = Bekleniyor…
 ytdlp_error_not_found = yt-dlp PATH içinde bulunamadı. Buradan indirin: https://github.com/yt-dlp/yt-dlp
 ytdlp_error_start = yt-dlp başlatılamadı: { $error }
 ytdlp_error_exit = yt-dlp sonlandı: { $status }
+
+channel_mode = Kanal Modu
+channel_mode_stereo = Stereo
+channel_mode_mono = Mono
+channel_mode_left_only = Sadece sol
+channel_mode_right_only = Sadece sağ
+channel_mode_swap_left_right = Sol/Sağ Değiştir

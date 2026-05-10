@@ -157,6 +157,46 @@ pub enum BackBehavior {
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Default)]
+pub enum ChannelMode {
+    #[default]
+    Stereo,
+    Mono,
+    LeftOnly,
+    RightOnly,
+    SwapLeftRight,
+}
+
+impl ChannelMode {
+    pub const ALL: &'static [Self] = &[
+        Self::Stereo,
+        Self::Mono,
+        Self::LeftOnly,
+        Self::RightOnly,
+        Self::SwapLeftRight,
+    ];
+
+    pub const fn value_str(self) -> &'static str {
+        match self {
+            Self::Stereo => "stereo",
+            Self::Mono => "mono",
+            Self::LeftOnly => "left-only",
+            Self::RightOnly => "right-only",
+            Self::SwapLeftRight => "swap-left-right",
+        }
+    }
+
+    pub fn from_value_str(value: &str) -> Self {
+        match value {
+            "mono" => Self::Mono,
+            "left-only" => Self::LeftOnly,
+            "right-only" => Self::RightOnly,
+            "swap-left-right" => Self::SwapLeftRight,
+            _ => Self::Stereo,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Default)]
 pub enum EqPreset {
     #[default]
     Flat,
@@ -404,6 +444,8 @@ pub struct AppConfig {
     #[serde(default)]
     pub back_behavior: BackBehavior,
     #[serde(default)]
+    pub channel_mode: ChannelMode,
+    #[serde(default)]
     pub equalizer: EqualizerSettings,
     #[serde(default)]
     pub ytdlp_output_dir: String,
@@ -535,6 +577,7 @@ impl Default for AppConfig {
             volume: default_volume(),
             custom_themes: HashMap::new(),
             back_behavior: BackBehavior::RewindThenPrev,
+            channel_mode: ChannelMode::Stereo,
             equalizer: EqualizerSettings::default(),
             ytdlp_output_dir: String::new(),
             ytdlp_options: YtdlpOptions::default(),

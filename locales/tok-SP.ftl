@@ -294,3 +294,10 @@ back_behavior = 󱤍 󱤉 󱤏 monsi
 back_behavior_rewind = 󱥄 󱤄 󱤂 → 󱤗
 back_behavior_always_prev = 󱤗 󱤄
 folder_playlist = 󱤕
+
+channel_mode = 󱥔 󱤴
+channel_mode_stereo = 󱤴 󱥩
+channel_mode_mono = 󱤴 󱥯
+channel_mode_left_only = 󱥭 󱤿 󱥔
+channel_mode_right_only = 󱥭 󱥬 󱥔
+channel_mode_swap_left_right = 󱤴 󱥭

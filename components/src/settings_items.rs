@@ -1,5 +1,6 @@
 use config::{
-    AppConfig, BackBehavior, EqPreset, EqualizerSettings as EqualizerConfig, MusicServer,
+    AppConfig, BackBehavior, ChannelMode, EqPreset, EqualizerSettings as EqualizerConfig,
+    MusicServer,
 };
 use dioxus::prelude::*;
 #[cfg(not(target_arch = "wasm32"))]
@@ -907,6 +908,37 @@ pub fn BackBehaviorSelector(
                 title: "{i18n::t(\"back_behavior_always_prev\")}",
                 onclick: move |_| on_change.call(BackBehavior::AlwaysPrev),
                 "{i18n::t(\"back_behavior_always_prev\")}"
+            }
+        }
+    }
+}
+
+fn channel_mode_label(mode: ChannelMode) -> String {
+    match mode {
+        ChannelMode::Stereo => i18n::t("channel_mode_stereo"),
+        ChannelMode::Mono => i18n::t("channel_mode_mono"),
+        ChannelMode::LeftOnly => i18n::t("channel_mode_left_only"),
+        ChannelMode::RightOnly => i18n::t("channel_mode_right_only"),
+        ChannelMode::SwapLeftRight => i18n::t("channel_mode_swap_left_right"),
+    }
+}
+
+#[component]
+pub fn ChannelModeSelector(
+    current: ChannelMode,
+    on_change: EventHandler<ChannelMode>,
+) -> Element {
+    rsx! {
+        select {
+            class: "bg-white/5 border border-white/10 rounded px-3 py-1 text-sm text-white focus:outline-none focus:border-white/20",
+            value: current.value_str(),
+            onchange: move |evt| on_change.call(ChannelMode::from_value_str(&evt.value())),
+            for mode in ChannelMode::ALL {
+                option {
+                    value: mode.value_str(),
+                    selected: *mode == current,
+                    "{channel_mode_label(*mode)}"
+                }
             }
         }
     }

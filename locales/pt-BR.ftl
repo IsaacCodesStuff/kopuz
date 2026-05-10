@@ -292,3 +292,10 @@ remove_from_folder = Remover da pasta
 back_behavior = Comportamento do botão Voltar
 back_behavior_rewind = VOLTAR → ANTERIOR
 back_behavior_always_prev = SEMPRE ANTERIOR
+
+channel_mode = Modo de Canal
+channel_mode_stereo = Estéreo
+channel_mode_mono = Mono
+channel_mode_left_only = Apenas esquerda
+channel_mode_right_only = Apenas direita
+channel_mode_swap_left_right = Inverter E/D

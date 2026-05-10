@@ -293,3 +293,10 @@ ytdlp_status_waiting = 等待中…
 ytdlp_error_not_found = PATH 中未找到 yt-dlp。请安装：https://github.com/yt-dlp/yt-dlp
 ytdlp_error_start = 启动 yt-dlp 失败：{ $error }
 ytdlp_error_exit = yt-dlp 返回状态异常：{ $status }
+
+channel_mode = 声道模式
+channel_mode_stereo = 立体声
+channel_mode_mono = 单声道
+channel_mode_left_only = 仅左声道
+channel_mode_right_only = 仅右声道
+channel_mode_swap_left_right = 交换左右
