@@ -36,6 +36,21 @@
             ]
         },
         {
+            "name": "yt-dlp",
+            "buildsystem": "simple",
+            "build-commands": [
+                "install -Dm755 yt-dlp /app/bin/yt-dlp"
+            ],
+            "sources": [
+                {
+                    "type": "file",
+                    "url": "https://github.com/yt-dlp/yt-dlp/releases/download/2026.03.17/yt-dlp",
+                    "sha256": "3bda0968a01cde70d26720653003b28553c71be14dcb2e5f4c24e9921fdad745",
+                    "dest-filename": "yt-dlp"
+                }
+            ]
+        },
+        {
             "name": "kopuz",
             "buildsystem": "simple",
             "build-commands": [
