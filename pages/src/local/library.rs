@@ -44,14 +44,6 @@ pub fn LocalLibrary(
     let displayed_tracks = use_memo(move || (items.all_tracks)());
     let album_covers = use_memo(move || (items.album_covers)());
 
-    let queue_tracks = use_memo(move || {
-        displayed_tracks()
-            .iter()
-            .map(|t| t.clone())
-            .collect::<Vec<_>>()
-    });
-
-    let all_tracks = displayed_tracks();
     let cover_urls = std::sync::Arc::new(album_covers());
     let is_empty = all_tracks.is_empty();
     let all_selected = !is_empty
@@ -69,7 +61,11 @@ pub fn LocalLibrary(
         (container_h / row_height).ceil() as usize
     };
     let buffer_size = 10;
-    let total_tracks = all_tracks.len();
+
+    let (total_tracks, is_empty) = {
+        let t = displayed_tracks.read();
+        (t.len(), t.is_empty())
+    };
 
     let start_index = {
         let max_start = total_tracks.saturating_sub(1);
@@ -101,18 +97,20 @@ pub fn LocalLibrary(
         (total_height - rendered_height - top_pad).max(0.0)
     };
 
-    let tracks_nodes = all_tracks
-        .into_iter()
-        .enumerate()
-        .skip(start_index)
+    let tracks_nodes = {
+        let all_tracks = displayed_tracks.read();
+        all_tracks
+            .iter()
+            .enumerate()
+            .skip(start_index)
         .take(items_to_render)
         .map(|(idx, track)| {
+            let track = track.clone();
             let track_menu = track.clone();
             let track_add = track.clone();
             let track_delete = track.clone();
             let track_path = track.path.clone();
             let track_select = track.path.clone();
-            let queue_arc = std::sync::Arc::clone(&queue_source);
             let cover_urls = std::sync::Arc::clone(&cover_urls);
             let track_key = track.path.display().to_string();
             let is_menu_open = active_menu_track.read().as_ref() == Some(&track.path);
@@ -164,13 +162,15 @@ div {
                             }
                         },
                         on_play: move |_| {
-                            queue.set((*queue_arc).clone());
+                            queue.set(displayed_tracks());
                             ctrl.play_track(idx);
                         },
                     }
                 }
             }
-        });
+        })
+        .collect::<Vec<_>>()
+    };
 
     rsx! {
              div {
@@ -365,7 +365,7 @@ div {
                     p { class: "text-slate-500 italic", "{i18n::t(\"no_tracks_found\")}" }
                 } else {
                     div { style: "height: {top_pad}px; flex-shrink: 0;" }
-                    {tracks_nodes}
+                    {tracks_nodes.into_iter()}
                     div { style: "height: {bottom_pad}px; flex-shrink: 0;" }
                 }
             }

@@ -602,21 +602,20 @@ impl PlayerController {
 
                                 spawn(async move {
                                     {
-                                        let conf = scrobble_cfg.read();
-                                        if let Some(server) = conf.server.as_ref() {
-                                            if matches!(server.service, MusicService::Subsonic | MusicService::Custom) {
-                                                if let (Some(password), Some(username)) =
-                                                    (&server.access_token, &server.user_id)
-                                                {
-                                                    let client = ::server::subsonic::SubsonicClient::new(
-                                                        &server.url,
-                                                        username,
-                                                        password,
-                                                    );
-                                                    if let Err(e) = client.scrobble_now_playing(&scrobble_id).await {
-                                                        tracing::warn!("Subsonic now-playing failed: {}", e);
-                                                    }
-                                                }
+                                        let subsonic_now = {
+                                            let conf = scrobble_cfg.read();
+                                            conf.server.as_ref().and_then(|s| {
+                                                if matches!(s.service, MusicService::Subsonic | MusicService::Custom) {
+                                                    if let (Some(pw), Some(un)) = (&s.access_token, &s.user_id) {
+                                                        Some((s.url.clone(), un.clone(), pw.clone()))
+                                                    } else { None }
+                                                } else { None }
+                                            })
+                                        };
+                                        if let Some((url, username, password)) = subsonic_now {
+                                            let client = ::server::subsonic::SubsonicClient::new(&url, &username, &password);
+                                            if let Err(e) = client.scrobble_now_playing(&scrobble_id).await {
+                                                tracing::warn!("Subsonic now-playing failed: {}", e);
                                             }
                                         }
                                     }
@@ -659,26 +658,25 @@ impl PlayerController {
                                     }
 
                                     {
-                                        let conf = scrobble_cfg.read();
-                                        if let Some(server) = conf.server.as_ref() {
-                                            if matches!(server.service, MusicService::Subsonic | MusicService::Custom) {
-                                                if let (Some(password), Some(username)) =
-                                                    (&server.access_token, &server.user_id)
-                                                {
-                                                    let client = ::server::subsonic::SubsonicClient::new(
-                                                        &server.url,
-                                                        username,
-                                                        password,
-                                                    );
-                                                    match client.scrobble(&scrobble_id).await {
-                                                        Ok(_) => tracing::info!(
-                                                            "Subsonic scrobbled: {} - {}",
-                                                            scrobble_track.artist,
-                                                            scrobble_track.title
-                                                        ),
-                                                        Err(e) => tracing::warn!("Subsonic scrobble failed: {}", e),
-                                                    }
-                                                }
+                                        let subsonic_scrobble = {
+                                            let conf = scrobble_cfg.read();
+                                            conf.server.as_ref().and_then(|s| {
+                                                if matches!(s.service, MusicService::Subsonic | MusicService::Custom) {
+                                                    if let (Some(pw), Some(un)) = (&s.access_token, &s.user_id) {
+                                                        Some((s.url.clone(), un.clone(), pw.clone()))
+                                                    } else { None }
+                                                } else { None }
+                                            })
+                                        };
+                                        if let Some((url, username, password)) = subsonic_scrobble {
+                                            let client = ::server::subsonic::SubsonicClient::new(&url, &username, &password);
+                                            match client.scrobble(&scrobble_id).await {
+                                                Ok(_) => tracing::info!(
+                                                    "Subsonic scrobbled: {} - {}",
+                                                    scrobble_track.artist,
+                                                    scrobble_track.title
+                                                ),
+                                                Err(e) => tracing::warn!("Subsonic scrobble failed: {}", e),
                                             }
                                         }
                                     }
@@ -852,26 +850,25 @@ impl PlayerController {
                                     }
 
                                     {
-                                        let conf = scrobble_cfg.read();
-                                        if let Some(server) = conf.server.as_ref() {
-                                            if matches!(server.service, MusicService::Subsonic | MusicService::Custom) {
-                                                if let (Some(password), Some(username)) =
-                                                    (&server.access_token, &server.user_id)
-                                                {
-                                                    let client = ::server::subsonic::SubsonicClient::new(
-                                                        &server.url,
-                                                        username,
-                                                        password,
-                                                    );
-                                                    match client.scrobble(&scrobble_id).await {
-                                                        Ok(_) => tracing::info!(
-                                                            "Subsonic scrobbled: {} - {}",
-                                                            scrobble_track.artist,
-                                                            scrobble_track.title
-                                                        ),
-                                                        Err(e) => tracing::warn!("Subsonic scrobble failed: {}", e),
-                                                    }
-                                                }
+                                        let subsonic_scrobble = {
+                                            let conf = scrobble_cfg.read();
+                                            conf.server.as_ref().and_then(|s| {
+                                                if matches!(s.service, MusicService::Subsonic | MusicService::Custom) {
+                                                    if let (Some(pw), Some(un)) = (&s.access_token, &s.user_id) {
+                                                        Some((s.url.clone(), un.clone(), pw.clone()))
+                                                    } else { None }
+                                                } else { None }
+                                            })
+                                        };
+                                        if let Some((url, username, password)) = subsonic_scrobble {
+                                            let client = ::server::subsonic::SubsonicClient::new(&url, &username, &password);
+                                            match client.scrobble(&scrobble_id).await {
+                                                Ok(_) => tracing::info!(
+                                                    "Subsonic scrobbled: {} - {}",
+                                                    scrobble_track.artist,
+                                                    scrobble_track.title
+                                                ),
+                                                Err(e) => tracing::warn!("Subsonic scrobble failed: {}", e),
                                             }
                                         }
                                     }

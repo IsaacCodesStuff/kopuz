@@ -98,7 +98,7 @@ pub fn LocalLogs(library: Signal<Library>, config: Signal<AppConfig>) -> Element
                                     div { class: "flex-1 min-w-0 pr-4 flex items-center",
                                         div { class: "w-10 h-10 bg-white/5 rounded-md flex items-center justify-center mr-4 shrink-0 text-slate-500 group-hover:text-slate-300 transition-colors overflow-hidden",
                                             if let Some(url) = cover_url {
-                                                img { src: "{url.as_ref()}", class: "w-full h-full object-cover" }
+                                                img { src: "{url.as_ref()}", class: "w-full h-full object-cover", decoding: "async", loading: "lazy" }
                                             } else {
                                                 i { class: "fa-solid fa-music text-xs" }
                                             }

@@ -221,15 +221,27 @@ pub fn Fullscreen(
                 div {
                     class: "rounded-2xl overflow-hidden mb-8 shadow-2xl",
                     style: "width: 100%; max-width: 420px; aspect-ratio: 1/1;",
-                    if current_song_cover_url.read().is_empty() {
-                        div {
-                            class: "w-full h-full flex items-center justify-center bg-black/30",
-                            i { class: "fa-solid fa-music text-5xl text-white/20" }
-                        }
-                    } else {
-                        img {
-                            src: "{current_song_cover_url}",
-                            class: "w-full h-full object-cover"
+                    {
+                        let cover = current_song_cover_url.read();
+                        if cover.is_empty() {
+                            rsx! {
+                                div {
+                                    class: "w-full h-full flex items-center justify-center bg-black/30",
+                                    i { class: "fa-solid fa-music text-5xl text-white/20" }
+                                }
+                            }
+                        } else {
+                            let src = if cover.starts_with("artwork://") {
+                                format!("{}&hq=1", cover)
+                            } else {
+                                cover.clone()
+                            };
+                            rsx! {
+                                img {
+                                    src: "{src}",
+                                    class: "w-full h-full object-cover"
+                                }
+                            }
                         }
                     }
                 }
