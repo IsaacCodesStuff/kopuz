@@ -11,6 +11,8 @@ use components::{
 };
 #[cfg(not(target_arch = "wasm32"))]
 use dioxus::desktop::tao::dpi::LogicalSize;
+#[cfg(not(target_arch = "wasm32"))]
+use dioxus::desktop::RequestAsyncResponder;
 #[cfg(all(not(target_arch = "wasm32"), target_os = "macos"))]
 use dioxus::desktop::tao::platform::macos::WindowBuilderExtMacOS;
 use dioxus::prelude::*;
@@ -220,6 +222,27 @@ fn read_titlebar_mode_from_disk() -> config::TitlebarMode {
         .unwrap_or_default()
 }
 
+
+#[cfg(not(target_arch = "wasm32"))]
+fn thumb_cache_path(file_path: &str) -> std::path::PathBuf {
+    use std::hash::{Hash, Hasher};
+    let mut hasher = std::collections::hash_map::DefaultHasher::new();
+    file_path.hash(&mut hasher);
+    let hash = hasher.finish();
+    std::env::temp_dir().join(format!("rusic_thumb_{:016x}.jpg", hash))
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+fn make_thumbnail(raw: &[u8], cache_path: &std::path::Path) -> Option<Vec<u8>> {
+    use image::GenericImageView;
+    use image::codecs::jpeg::JpegEncoder;
+    let img = image::load_from_memory(raw).ok()?;
+    let mut out: Vec<u8> = Vec::new();
+    img.write_with_encoder(JpegEncoder::new_with_quality(&mut out, 100)).ok()?;
+    let _ = std::fs::write(cache_path, &out);
+    Some(out)
+}
+
 fn main() {
     #[cfg(not(target_arch = "wasm32"))]
     {
@@ -288,75 +311,99 @@ fn main() {
         let config = dioxus::desktop::Config::new()
             .with_data_directory(webview_data_dir)
             .with_window(window)
-            .with_custom_protocol("artwork", |_headers, request| {
-                let uri = request.uri();
+            .with_asynchronous_custom_protocol("artwork", |_id, request, responder: RequestAsyncResponder| {
+                let uri = request.uri().clone();
 
-                let file_path: String = uri
-                    .query()
-                    .and_then(|q| {
-                        q.split('&')
-                            .find_map(|kv| kv.strip_prefix("p="))
-                            .map(|encoded| {
-                                percent_encoding::percent_decode_str(encoded)
-                                    .decode_utf8_lossy()
-                                    .into_owned()
-                            })
-                    })
-                    .unwrap_or_default();
+                tokio::spawn(async move {
+                    let file_path: String = uri
+                        .query()
+                        .and_then(|q| {
+                            q.split('&')
+                                .find_map(|kv| kv.strip_prefix("p="))
+                                .map(|encoded| {
+                                    percent_encoding::percent_decode_str(encoded)
+                                        .decode_utf8_lossy()
+                                        .into_owned()
+                                })
+                        })
+                        .unwrap_or_default();
 
-                if file_path.is_empty() {
-                    return http::Response::builder()
-                        .status(400)
-                        .body(std::borrow::Cow::from(Vec::new()))
-                        .unwrap();
-                }
+                    if file_path.is_empty() {
+                        responder.respond(
+                            http::Response::builder()
+                                .status(400)
+                                .body(std::borrow::Cow::from(Vec::new()))
+                                .unwrap(),
+                        );
+                        return;
+                    }
 
-                // convert forward slashes back to backslashes for proper path handling
-                #[cfg(target_os = "windows")]
-                let file_path = file_path.replace('/', "\\");
+                    #[cfg(target_os = "windows")]
+                    let file_path = file_path.replace('/', "\\");
 
-                #[cfg(not(target_os = "windows"))]
-                let file_path = if file_path.starts_with('~') {
-                    if let Ok(home) = std::env::var("HOME") {
-                        file_path.replacen('~', &home, 1)
+                    #[cfg(not(target_os = "windows"))]
+                    let file_path = if file_path.starts_with('~') {
+                        if let Ok(home) = std::env::var("HOME") {
+                            file_path.replacen('~', &home, 1)
+                        } else {
+                            file_path
+                        }
                     } else {
                         file_path
-                    }
-                } else {
-                    file_path
-                };
+                    };
 
-                let path = std::path::Path::new(&file_path);
+                    let thumb_path = thumb_cache_path(&file_path);
 
-                if !path.exists() {
-                    tracing::warn!("[artwork] File not found: {}", file_path);
-                    return http::Response::builder()
-                        .status(404)
-                        .body(std::borrow::Cow::from(Vec::new()))
-                        .unwrap();
-                }
+                    let (bytes, mime) = if thumb_path.exists() {
+                        match tokio::fs::read(&thumb_path).await {
+                            Ok(b) => (b, "image/jpeg"),
+                            Err(_) => {
+                                // thumb corrupted, fall through to re-generate
+                                let _ = std::fs::remove_file(&thumb_path);
+                                match tokio::fs::read(&file_path).await {
+                                    Ok(b) => (b, if file_path.ends_with(".png") { "image/png" } else { "image/jpeg" }),
+                                    Err(_) => {
+                                        responder.respond(http::Response::builder().status(404).body(std::borrow::Cow::from(Vec::new())).unwrap());
+                                        return;
+                                    }
+                                }
+                            }
+                        }
+                    } else {
+                        match tokio::fs::read(&file_path).await {
+                            Ok(raw) => {
+                                let thumb_path_clone = thumb_path.clone();
+                                match tokio::task::spawn_blocking(move || {
+                                    match make_thumbnail(&raw, &thumb_path_clone) {
+                                        Some(b) => Ok(b),
+                                        None => Err(raw),
+                                    }
+                                }).await {
+                                    Ok(Ok(b)) => (b, "image/jpeg"),
+                                    Ok(Err(raw)) => (raw, if file_path.ends_with(".png") { "image/png" } else { "image/jpeg" }),
+                                    Err(_) => {
+                                        responder.respond(http::Response::builder().status(500).body(std::borrow::Cow::from(Vec::new())).unwrap());
+                                        return;
+                                    }
+                                }
+                            }
+                            Err(e) => {
+                                tracing::warn!("[artwork] not found {}: {}", file_path, e);
+                                responder.respond(http::Response::builder().status(404).body(std::borrow::Cow::from(Vec::new())).unwrap());
+                                return;
+                            }
+                        }
+                    };
 
-                let mime = if file_path.ends_with(".png") {
-                    "image/png"
-                } else {
-                    "image/jpeg"
-                };
-
-                match std::fs::read(path) {
-                    Ok(content) => http::Response::builder()
-                        .header("Content-Type", mime)
-                        .header("Access-Control-Allow-Origin", "*")
-                        .header("Cache-Control", "public, max-age=31536000")
-                        .body(std::borrow::Cow::from(content))
-                        .unwrap(),
-                    Err(e) => {
-                        tracing::error!("[artwork] Failed to read file {}: {}", file_path, e);
+                    responder.respond(
                         http::Response::builder()
-                            .status(500)
-                            .body(std::borrow::Cow::from(Vec::new()))
-                            .unwrap()
-                    }
-                }
+                            .header("Content-Type", mime)
+                            .header("Access-Control-Allow-Origin", "*")
+                            .header("Cache-Control", "public, max-age=31536000")
+                            .body(std::borrow::Cow::from(bytes))
+                            .unwrap(),
+                    );
+                });
             });
 
         dioxus::LaunchBuilder::desktop()

@@ -3271,6 +3271,7 @@ dependencies = [
  "hooks",
  "http 1.4.0",
  "i18n",
+ "image",
  "kopuz_route",
  "objc2",
  "objc2-app-kit",

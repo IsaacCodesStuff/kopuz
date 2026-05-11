@@ -103,7 +103,7 @@ pub fn LocalHome(
                         rsx! {
                             div { class: "absolute inset-0",
                                 if let Some(url) = utils::format_artwork_url(album.cover_path.as_ref()) {
-                                    img { src: "{url.as_ref()}", class: "w-full h-full object-cover" }
+                                    img { src: "{url.as_ref()}", class: "w-full h-full object-cover", decoding: "async" }
                                 }
                                 div { class: "absolute inset-0 bg-gradient-to-r from-black/90 via-black/40 to-transparent" }
                             }
@@ -184,7 +184,7 @@ pub fn LocalHome(
                 let local_list = local_shuffled.read();
                 if !local_list.is_empty() {
                     rsx! {
-                        section { class: "mb-12",
+                        section { class: "cv-section mb-12",
                             div { class: "flex items-end justify-between mb-6 text-white",
                                 div {
                                     h2 { class: "text-3xl font-extrabold tracking-tight", "{i18n::t(\"listen_now\")}" }
@@ -198,9 +198,9 @@ pub fn LocalHome(
                                             let id = album.id.clone();
                                             move |_| on_select_album.call(id.clone())
                                         },
-                                        div { class: "w-16 h-16 md:w-20 md:h-20 flex-shrink-0 bg-stone-800/50 relative overflow-hidden",
+                                        div { class: "w-16 h-16 md:w-20 md:h-20 flex-shrink-0 bg-stone-800/50 relative overflow-hidden gpu-hover",
                                             if let Some(url) = utils::format_artwork_url(album.cover_path.as_ref()) {
-                                                img { src: "{url.as_ref()}", class: "w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" }
+                                                img { src: "{url.as_ref()}", class: "w-full h-full object-cover group-hover:scale-105 transition-transform duration-500", decoding: "async", loading: "lazy" }
                                             } else {
                                                 div { class: "w-full h-full flex items-center justify-center",
                                                     i { class: "fa-solid fa-compact-disc text-xl text-white/20" }
@@ -236,7 +236,7 @@ pub fn LocalHome(
             }
 
             if !artists().is_empty() {
-                section { class: "mt-12",
+                section { class: "cv-section mt-12",
                     div { class: "flex items-center justify-between mb-6",
                         h2 { class: "text-2xl font-bold text-white tracking-tight", "{i18n::t(\"top_artists\")}" }
                         div { class: "flex gap-2",
@@ -262,10 +262,10 @@ pub fn LocalHome(
                                     let artist = artist.clone();
                                     move |_| on_search_artist.call(artist.clone())
                                 },
-                                div { class: "aspect-square rounded-full bg-stone-800/80 mb-4 overflow-hidden transition-all duration-300 relative mx-auto",
+                                div { class: "aspect-square rounded-full bg-stone-800/80 mb-4 overflow-hidden transition-all duration-300 relative mx-auto gpu-hover",
                                     if let Some(path) = cover_path {
                                         if let Some(url) = utils::format_artwork_url(Some(&path)) {
-                                            img { src: "{url.as_ref()}", class: "w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" }
+                                            img { src: "{url.as_ref()}", class: "w-full h-full object-cover group-hover:scale-110 transition-transform duration-700", decoding: "async", loading: "lazy" }
                                         }
                                     } else {
                                         div { class: "w-full h-full flex items-center justify-center border border-white/5 rounded-full",
@@ -282,7 +282,7 @@ pub fn LocalHome(
             }
 
             if !recent_albums().is_empty() {
-                section { class: "mt-12",
+                section { class: "cv-section mt-12",
                     div { class: "flex items-center justify-between mb-6",
                         h2 { class: "text-2xl font-bold text-white tracking-tight", "{i18n::t(\"new_releases\")}" }
                         div { class: "flex gap-2",
@@ -308,9 +308,9 @@ pub fn LocalHome(
                                     let id = album.id.clone();
                                     move |_| on_select_album.call(id.clone())
                                 },
-                                div { class: "aspect-square rounded-2xl bg-stone-800/80 mb-4 overflow-hidden transition-all duration-300 relative",
+                                div { class: "aspect-square rounded-2xl bg-stone-800/80 mb-4 overflow-hidden transition-all duration-300 relative gpu-hover",
                                     if let Some(url) = utils::format_artwork_url(album.cover_path.as_ref()) {
-                                        img { src: "{url.as_ref()}", class: "w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" }
+                                        img { src: "{url.as_ref()}", class: "w-full h-full object-cover group-hover:scale-105 transition-transform duration-500", decoding: "async", loading: "lazy" }
                                     } else {
                                         div { class: "w-full h-full flex items-center justify-center border border-white/5 rounded-2xl",
                                             i { class: "fa-solid fa-compact-disc text-3xl text-white/20" }
@@ -338,7 +338,7 @@ pub fn LocalHome(
             }
 
             if !recent_playlists().is_empty() {
-                section { class: "mt-16",
+                section { class: "cv-section mt-16",
                     div { class: "flex items-center justify-between mb-6",
                         div {
                             h2 { class: "text-2xl font-bold text-white tracking-tight", "{i18n::t(\"playlists\")}" }
@@ -388,9 +388,9 @@ pub fn LocalHome(
                                             let id = id.clone();
                                             move |_| on_select_playlist.call(id.clone())
                                         },
-                                        div { class: "aspect-square rounded-2xl bg-white/5 mb-4 overflow-hidden transition-all duration-500 relative",
+                                        div { class: "aspect-square rounded-2xl bg-white/5 mb-4 overflow-hidden transition-all duration-500 relative gpu-hover",
                                             if let Some(url) = cover_url {
-                                                img { src: "{url.as_ref()}", class: "w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" }
+                                                img { src: "{url.as_ref()}", class: "w-full h-full object-cover group-hover:scale-110 transition-transform duration-700", decoding: "async", loading: "lazy" }
                                             } else {
                                                 div { class: "w-full h-full flex items-center justify-center bg-gradient-to-br from-indigo-600/20 to-purple-600/20 group-hover:scale-110 transition-transform duration-700",
                                                     i { class: "fa-solid fa-music text-5xl opacity-40 text-white" }
