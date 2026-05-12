@@ -2,7 +2,7 @@ use percent_encoding::NON_ALPHANUMERIC;
 use serde::Deserialize;
 
 #[derive(Debug, Deserialize)]
-struct LrcResponse {
+struct LrcLibResponse {
     #[serde(rename = "syncedLyrics")]
     synced_lyrics: Option<String>,
     #[serde(rename = "plainLyrics")]
@@ -21,7 +21,372 @@ pub enum Lyrics {
     Plain(String),
 }
 
-pub async fn fetch_lyrics(artist: &str, title: &str, album: &str, duration: u64) -> Option<Lyrics> {
+// --- Jellyfin lyrics types ---
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "PascalCase")]
+struct JellyfinLyricsResponse {
+    #[serde(default)]
+    lyrics: Vec<JellyfinLyricLine>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "PascalCase")]
+struct JellyfinLyricLine {
+    text: String,
+    start: Option<i64>,
+}
+
+// --- Subsonic lyrics types (getLyricsBySongId - OpenSubsonic extension) ---
+
+#[derive(Debug, Deserialize)]
+struct SubsonicSongLyricsEnvelope {
+    #[serde(rename = "subsonic-response")]
+    response: SubsonicSongLyricsResponse,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct SubsonicSongLyricsResponse {
+    status: String,
+    #[serde(default)]
+    lyrics_list: Option<SubsonicLyricsList>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct SubsonicLyricsList {
+    #[serde(default)]
+    structured_lyrics: Vec<SubsonicStructuredLyric>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct SubsonicStructuredLyric {
+    synced: bool,
+    #[serde(default)]
+    line: Vec<SubsonicLyricLine>,
+}
+
+#[derive(Debug, Deserialize)]
+struct SubsonicLyricLine {
+    #[serde(default)]
+    start: Option<i64>,
+    value: String,
+}
+
+// --- Subsonic lyrics types (getLyrics - basic endpoint) ---
+
+#[derive(Debug, Deserialize)]
+struct SubsonicPlainLyricsEnvelope {
+    #[serde(rename = "subsonic-response")]
+    response: SubsonicPlainLyricsResponse,
+}
+
+#[derive(Debug, Deserialize)]
+struct SubsonicPlainLyricsResponse {
+    status: String,
+    #[serde(default)]
+    lyrics: Option<SubsonicPlainLyricsData>,
+}
+
+#[derive(Debug, Deserialize)]
+struct SubsonicPlainLyricsData {
+    #[serde(default)]
+    value: String,
+}
+
+// --- Public API ---
+
+/// Fetch lyrics for a track, trying sources in priority order:
+/// 1. Local .lrc file alongside the audio file (local tracks only)
+/// 2. Jellyfin or Subsonic server lyrics API (server tracks)
+/// 3. lrclib.net (fallback for all tracks)
+///
+/// For Jellyfin: `server_token` = access token, `server_user_id` = user_id (unused for lyrics)
+/// For Subsonic: `server_token` = password, `server_user_id` = username
+pub async fn fetch_lyrics(
+    artist: &str,
+    title: &str,
+    album: &str,
+    duration: u64,
+    track_path: &str,
+    server_url: Option<&str>,
+    server_token: Option<&str>,
+    server_user_id: Option<&str>,
+) -> Option<Lyrics> {
+    let is_server = track_path.starts_with("jellyfin:")
+        || track_path.starts_with("subsonic:")
+        || track_path.starts_with("custom:");
+
+    // 1. Local .lrc file (only for local tracks)
+    if !is_server {
+        if let Some(lyrics) = fetch_local_lrc(track_path).await {
+            return Some(lyrics);
+        }
+    }
+
+    // 2. Server lyrics
+    if let Some(server_url) = server_url {
+        if track_path.starts_with("jellyfin:") {
+            if let (Some(item_id), Some(token)) =
+                (extract_server_id(track_path, "jellyfin:"), server_token)
+            {
+                if let Some(lyrics) = fetch_jellyfin_lyrics(&item_id, server_url, token).await {
+                    return Some(lyrics);
+                }
+            }
+        } else if track_path.starts_with("subsonic:") || track_path.starts_with("custom:") {
+            let prefix = if track_path.starts_with("subsonic:") {
+                "subsonic:"
+            } else {
+                "custom:"
+            };
+            if let (Some(song_id), Some(username), Some(password)) = (
+                extract_server_id(track_path, prefix),
+                server_user_id,
+                server_token,
+            ) {
+                if let Some(lyrics) =
+                    fetch_subsonic_lyrics(&song_id, server_url, username, password, artist, title)
+                        .await
+                {
+                    return Some(lyrics);
+                }
+            }
+        }
+    }
+
+    // 3. lrclib fallback
+    fetch_from_lrclib(artist, title, album, duration).await
+}
+
+fn extract_server_id(path: &str, prefix: &str) -> Option<String> {
+    path.strip_prefix(prefix)
+        .and_then(|rest| rest.split(':').next())
+        .filter(|s| !s.is_empty())
+        .map(|s| s.to_string())
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+async fn fetch_local_lrc(audio_path: &str) -> Option<Lyrics> {
+    let lrc_path = std::path::Path::new(audio_path).with_extension("lrc");
+    let content = std::fs::read_to_string(&lrc_path).ok()?;
+    if content.trim().is_empty() {
+        return None;
+    }
+    let lines = parse_lrc(&content);
+    if !lines.is_empty() {
+        Some(Lyrics::Synced(lines))
+    } else {
+        Some(Lyrics::Plain(content))
+    }
+}
+
+#[cfg(target_arch = "wasm32")]
+async fn fetch_local_lrc(_audio_path: &str) -> Option<Lyrics> {
+    None
+}
+
+async fn fetch_jellyfin_lyrics(item_id: &str, server_url: &str, token: &str) -> Option<Lyrics> {
+    let url = format!("{}/Items/{}/Lyrics", server_url.trim_end_matches('/'), item_id);
+    let client = reqwest::Client::new();
+    let resp = client
+        .get(&url)
+        .header("X-Emby-Token", token)
+        .send()
+        .await
+        .ok()?;
+
+    if !resp.status().is_success() {
+        return None;
+    }
+
+    let data: JellyfinLyricsResponse = resp.json().await.ok()?;
+    if data.lyrics.is_empty() {
+        return None;
+    }
+
+    let has_timestamps = data.lyrics.iter().any(|l| l.start.is_some());
+    if has_timestamps {
+        let mut lines: Vec<LyricLine> = data
+            .lyrics
+            .iter()
+            .filter(|l| !l.text.trim().is_empty())
+            .filter_map(|l| {
+                l.start.map(|ticks| LyricLine {
+                    // Jellyfin uses 100-nanosecond ticks; divide by 10,000,000 to get seconds
+                    start_time: ticks as f64 / 10_000_000.0,
+                    text: l.text.clone(),
+                })
+            })
+            .collect();
+        lines.sort_by(|a, b| {
+            a.start_time
+                .partial_cmp(&b.start_time)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
+        if !lines.is_empty() {
+            return Some(Lyrics::Synced(lines));
+        }
+    }
+
+    let text: String = data
+        .lyrics
+        .iter()
+        .map(|l| l.text.as_str())
+        .collect::<Vec<_>>()
+        .join("\n");
+    if !text.trim().is_empty() {
+        Some(Lyrics::Plain(text))
+    } else {
+        None
+    }
+}
+
+async fn fetch_subsonic_lyrics(
+    song_id: &str,
+    server_url: &str,
+    username: &str,
+    password: &str,
+    artist: &str,
+    title: &str,
+) -> Option<Lyrics> {
+    let base_url = server_url.trim_end_matches('/');
+    let client = reqwest::Client::new();
+
+    // Subsonic uses MD5(password+salt) for auth
+    let salt = "kopuzlyrics";
+    let token = format!("{:x}", md5::compute(format!("{}{}", password, salt)));
+
+    // Try getLyricsBySongId first (OpenSubsonic extension, synced lyrics)
+    if let Some(lyrics) =
+        subsonic_get_by_id(&client, base_url, username, &token, salt, song_id).await
+    {
+        return Some(lyrics);
+    }
+
+    // Fall back to getLyrics (title+artist, plain text or LRC)
+    subsonic_get_by_title(&client, base_url, username, &token, salt, artist, title).await
+}
+
+async fn subsonic_get_by_id(
+    client: &reqwest::Client,
+    base_url: &str,
+    username: &str,
+    token: &str,
+    salt: &str,
+    song_id: &str,
+) -> Option<Lyrics> {
+    let url = format!("{}/rest/getLyricsBySongId.view", base_url);
+    let params = [
+        ("u", username),
+        ("t", token),
+        ("s", salt),
+        ("v", "1.16.1"),
+        ("c", "kopuz"),
+        ("f", "json"),
+        ("id", song_id),
+    ];
+
+    let resp = client.get(&url).query(&params).send().await.ok()?;
+    if !resp.status().is_success() {
+        return None;
+    }
+
+    let data: SubsonicSongLyricsEnvelope = resp.json().await.ok()?;
+    if !data.response.status.eq_ignore_ascii_case("ok") {
+        return None;
+    }
+
+    let structured = data
+        .response
+        .lyrics_list?
+        .structured_lyrics
+        .into_iter()
+        .next()?;
+
+    if structured.synced {
+        let mut lines: Vec<LyricLine> = structured
+            .line
+            .iter()
+            .filter(|l| !l.value.trim().is_empty())
+            .filter_map(|l| {
+                l.start.map(|ms| LyricLine {
+                    start_time: ms as f64 / 1000.0,
+                    text: l.value.clone(),
+                })
+            })
+            .collect();
+        lines.sort_by(|a, b| {
+            a.start_time
+                .partial_cmp(&b.start_time)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
+        if !lines.is_empty() {
+            return Some(Lyrics::Synced(lines));
+        }
+    }
+
+    let text: String = structured
+        .line
+        .iter()
+        .map(|l| l.value.as_str())
+        .collect::<Vec<_>>()
+        .join("\n");
+    if !text.trim().is_empty() {
+        Some(Lyrics::Plain(text))
+    } else {
+        None
+    }
+}
+
+async fn subsonic_get_by_title(
+    client: &reqwest::Client,
+    base_url: &str,
+    username: &str,
+    token: &str,
+    salt: &str,
+    artist: &str,
+    title: &str,
+) -> Option<Lyrics> {
+    let url = format!("{}/rest/getLyrics.view", base_url);
+    let params = [
+        ("u", username),
+        ("t", token),
+        ("s", salt),
+        ("v", "1.16.1"),
+        ("c", "kopuz"),
+        ("f", "json"),
+        ("artist", artist),
+        ("title", title),
+    ];
+
+    let resp = client.get(&url).query(&params).send().await.ok()?;
+    if !resp.status().is_success() {
+        return None;
+    }
+
+    let data: SubsonicPlainLyricsEnvelope = resp.json().await.ok()?;
+    if !data.response.status.eq_ignore_ascii_case("ok") {
+        return None;
+    }
+
+    let value = data.response.lyrics?.value;
+    if value.trim().is_empty() {
+        return None;
+    }
+
+    // getLyrics may return LRC-formatted text
+    let parsed = parse_lrc(&value);
+    if !parsed.is_empty() {
+        Some(Lyrics::Synced(parsed))
+    } else {
+        Some(Lyrics::Plain(value))
+    }
+}
+
+async fn fetch_from_lrclib(artist: &str, title: &str, album: &str, duration: u64) -> Option<Lyrics> {
     let mut url = format!(
         "https://lrclib.net/api/get?artist_name={}&track_name={}",
         percent_encoding::utf8_percent_encode(artist, NON_ALPHANUMERIC),
@@ -41,14 +406,14 @@ pub async fn fetch_lyrics(artist: &str, title: &str, album: &str, duration: u64)
     let client = reqwest::Client::new();
     let res = client
         .get(&url)
-        .header("User-Agent", "kopuz/0.3.3")
+        .header("User-Agent", "kopuz/0.5.5")
         .send()
         .await
         .ok()?;
 
     if res.status().is_success() {
-        if let Ok(data) = res.json::<LrcResponse>().await {
-            if let Some(lyrics) = extract_from_response(&data) {
+        if let Ok(data) = res.json::<LrcLibResponse>().await {
+            if let Some(lyrics) = extract_from_lrclib_response(&data) {
                 return Some(lyrics);
             }
         }
@@ -61,15 +426,15 @@ pub async fn fetch_lyrics(artist: &str, title: &str, album: &str, duration: u64)
     );
     let search_res = client
         .get(&search_url)
-        .header("User-Agent", "kopuz/0.3.3")
+        .header("User-Agent", "kopuz/0.5.5")
         .send()
         .await
         .ok()?;
 
     if search_res.status().is_success() {
-        if let Ok(results) = search_res.json::<Vec<LrcResponse>>().await {
+        if let Ok(results) = search_res.json::<Vec<LrcLibResponse>>().await {
             for data in results {
-                if let Some(lyrics) = extract_from_response(&data) {
+                if let Some(lyrics) = extract_from_lrclib_response(&data) {
                     return Some(lyrics);
                 }
             }
@@ -79,7 +444,7 @@ pub async fn fetch_lyrics(artist: &str, title: &str, album: &str, duration: u64)
     None
 }
 
-fn extract_from_response(data: &LrcResponse) -> Option<Lyrics> {
+fn extract_from_lrclib_response(data: &LrcLibResponse) -> Option<Lyrics> {
     if let Some(synced) = &data.synced_lyrics {
         if !synced.trim().is_empty() {
             return Some(Lyrics::Synced(parse_lrc(synced)));

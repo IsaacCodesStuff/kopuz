@@ -6898,6 +6898,7 @@ dependencies = [
  "color-thief",
  "gloo-timers",
  "image",
+ "md5",
  "percent-encoding",
  "reqwest 0.12.28",
  "serde",

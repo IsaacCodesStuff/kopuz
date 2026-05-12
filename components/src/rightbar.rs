@@ -36,25 +36,64 @@ pub fn Rightbar(
 
     let config = use_context::<Signal<AppConfig>>();
 
-    let lyrics = use_resource(move || {
-        let title = current_song_title.read().clone();
-        let artist = current_song_artist.read().clone();
-        let album = current_song_album.read().clone();
-        let duration = *current_song_duration.read();
+    let mut lyrics: Signal<Option<Option<utils::lyrics::Lyrics>>> = use_signal(|| None);
+    let mut fetch_gen: Signal<u32> = use_signal(|| 0);
+    let mut last_key: Signal<String> = use_signal(String::new);
 
-        async move {
-            if !title.is_empty() {
-                if let Some(l) =
-                    utils::lyrics::fetch_lyrics(&artist, &title, &album, duration).await
-                {
-                    Some(l)
-                } else {
-                    Some(utils::lyrics::Lyrics::Plain(i18n::t("lyrics_not_found").to_string()))
-                }
-            } else {
-                None
-            }
+    use_effect(move || {
+        let title = current_song_title.read().clone();
+        let track_path = {
+            let q = queue.read();
+            let idx = *current_queue_index.read();
+            q.get(idx)
+                .map(|t| t.path.to_string_lossy().into_owned())
+                .unwrap_or_default()
+        };
+        let new_key = format!("{}|{}", title, track_path);
+        if *last_key.peek() == new_key {
+            return;
         }
+        last_key.set(new_key);
+
+        let artist = current_song_artist.peek().clone();
+        let album = current_song_album.peek().clone();
+        let duration = *current_song_duration.peek();
+        let (server_url, server_token, server_user_id) = {
+            let conf = config.peek();
+            if let Some(server) = &conf.server {
+                (Some(server.url.clone()), server.access_token.clone(), server.user_id.clone())
+            } else {
+                (None, None, None)
+            }
+        };
+
+        let fetch_id = fetch_gen.peek().wrapping_add(1);
+        fetch_gen.set(fetch_id);
+        lyrics.set(None);
+
+        if title.is_empty() {
+            return;
+        }
+
+        spawn(async move {
+            let result = utils::lyrics::fetch_lyrics(
+                &artist,
+                &title,
+                &album,
+                duration,
+                &track_path,
+                server_url.as_deref(),
+                server_token.as_deref(),
+                server_user_id.as_deref(),
+            )
+            .await;
+            if *fetch_gen.peek() == fetch_id {
+                let display = result.or_else(|| {
+                    Some(utils::lyrics::Lyrics::Plain(i18n::t("lyrics_not_found").to_string()))
+                });
+                lyrics.set(Some(display));
+            }
+        });
     });
 
     let active_lyric_index = use_memo(move || {
