@@ -107,6 +107,7 @@ pub fn LocalLibrary(
             let track = track.clone();
             let track_menu = track.clone();
             let track_add = track.clone();
+            let track_queue = track.clone();
             let track_delete = track.clone();
             let track_path = track.path.clone();
             let track_select = track.path.clone();
@@ -151,6 +152,10 @@ div {
                         on_add_to_playlist: move |_| {
                             selected_track_for_playlist.set(Some(track_add.path.clone()));
                             show_playlist_modal.set(true);
+                            active_menu_track.set(None);
+                        },
+                        on_queue: move |_| {
+                            queue.write().push(track_queue.clone());
                             active_menu_track.set(None);
                         },
                         on_close_menu: move |_| active_menu_track.set(None),

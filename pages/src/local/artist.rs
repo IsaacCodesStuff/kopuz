@@ -291,10 +291,13 @@ pub fn LocalArtist(
                             p { class: "text-slate-500", "{i18n::t(\"no_albums_found\")}" }
                         } else {
                             {
+                                let add_all_to_queue_text = i18n::t("add_all_to_queue").to_string();
                                 let add_all_to_playlist_text = i18n::t("add_all_to_playlist").to_string();
                                 let delete_album_text = i18n::t("delete_album").to_string();
+
                                 let album_menu_actions = vec![
-                                    MenuAction::new(add_all_to_playlist_text.as_str(), "fa-solid fa-list-music"),
+                                    MenuAction::new(add_all_to_queue_text.as_str(), "fa-solid fa-list-ul"),
+                                    MenuAction::new(add_all_to_playlist_text.as_str(), "fa-solid fa-plus"),
                                     MenuAction::new(delete_album_text.as_str(), "fa-solid fa-trash").destructive(),
                                 ];
                                 rsx! {
@@ -303,6 +306,7 @@ pub fn LocalArtist(
                                             {
                                                 let id_for_menu = album.id.clone();
                                                 let id_for_action = album.id.clone();
+                                                let title_for_action = album.title.clone();
                                                 let is_open = open_album_menu.read().as_deref() == Some(&album.id);
                                                 let cover_url = utils::format_artwork_url(album.cover_path.as_ref());
                                                 rsx! {
@@ -349,28 +353,50 @@ pub fn LocalArtist(
                                                                 anchor: "right".to_string(),
                                                                 on_action: {
                                                                     let id = id_for_action.clone();
+                                                                    let title = title_for_action.clone();
                                                                     move |idx: usize| {
                                                                         open_album_menu.set(None);
                                                                         match idx {
                                                                             0 => {
-                                                                                pending_album_id_for_playlist.set(Some(id.clone()));
-                                                                                show_album_playlist_modal.set(true);
-                                                                            }
-                                                                            1 => {
-                                                                                let tracks_to_delete: Vec<_> = library
+                                                                                let mut tracks_for_queue: Vec<_> = library
                                                                                     .read()
                                                                                     .tracks
                                                                                     .iter()
                                                                                     .filter(|t| t.album_id == id)
+                                                                                    .cloned()
+                                                                                    .collect();
+
+                                                                                tracks_for_queue.sort_by(|a, b| {
+                                                                                    a.track_number
+                                                                                        .cmp(&b.track_number)
+                                                                                        .then_with(|| a.title.cmp(&b.title))
+                                                                                });
+
+                                                                                queue.write().extend(tracks_for_queue);
+                                                                            }
+                                                                            1 => {
+                                                                                pending_album_id_for_playlist.set(Some(id.clone()));
+                                                                                show_album_playlist_modal.set(true);
+                                                                            }
+                                                                            2 => {
+                                                                                let tracks_to_delete: Vec<_> = library
+                                                                                    .read()
+                                                                                    .tracks
+                                                                                    .iter()
+                                                                                    .filter(|t| t.album == title)
                                                                                     .map(|t| t.path.clone())
                                                                                     .collect();
+
                                                                                 for path in &tracks_to_delete {
                                                                                     let _ = std::fs::remove_file(path);
                                                                                 }
+
                                                                                 let mut lib = library.write();
-                                                                                lib.albums.retain(|a| a.id != id);
-                                                                                lib.tracks.retain(|t| t.album_id != id);
+
+                                                                                lib.albums.retain(|a| a.title != title);
+                                                                                lib.tracks.retain(|t| t.album != title);
                                                                             }
+
                                                                             _ => {}
                                                                         }
                                                                     }
@@ -448,6 +474,12 @@ pub fn LocalArtist(
                                     if let Some(track) = artist_tracks().get(idx) {
                                         selected_track_for_playlist.set(Some(track.path.clone()));
                                         show_playlist_modal.set(true);
+                                        active_menu_track.set(None);
+                                    }
+                                },
+                                on_queue: move |idx: usize| {
+                                    if let Some(track) = artist_tracks().get(idx) {
+                                        queue.write().push(track.clone());
                                         active_menu_track.set(None);
                                     }
                                 },

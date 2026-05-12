@@ -138,6 +138,7 @@ pub fn JellyfinFavorites(
             let track_path = track.path.clone();
             let track_select = track.path.clone();
             let track_add = track.clone();
+            let track_queue = track.clone();
             let queue_source = queue_tracks.clone();
             let track_key = format!("{}-{}", track.path.display(), idx);
             let is_menu_open = active_menu_track.read().as_ref() == Some(&track.path);
@@ -190,6 +191,10 @@ pub fn JellyfinFavorites(
                     on_add_to_playlist: move |_| {
                         selected_track_for_playlist.set(Some(track_add.path.clone()));
                         show_playlist_modal.set(true);
+                        active_menu_track.set(None);
+                    },
+                    on_queue: move |_| {
+                        queue.write().push(track_queue.clone());
                         active_menu_track.set(None);
                     },
                     on_close_menu: move |_| active_menu_track.set(None),

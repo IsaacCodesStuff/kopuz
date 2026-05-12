@@ -42,6 +42,7 @@ pub fn SearchResults(
                                 let track_key = track.path.display().to_string();
                                 let track_menu = track.clone();
                                 let track_add = track.clone();
+                                let track_queue = track.clone();
                                 let track_delete = track.clone();
                                 let is_menu_open = active_menu_track.read().as_ref() == Some(&track.path);
                                 let search_queue: Vec<Track> = tracks.iter().map(|(t, _)| t.clone()).collect();
@@ -78,6 +79,10 @@ pub fn SearchResults(
                                         on_add_to_playlist: move |_| {
                                             selected_track_for_playlist.set(Some(track_add.path.clone()));
                                             show_playlist_modal.set(true);
+                                            active_menu_track.set(None);
+                                        },
+                                        on_queue: move |_| {
+                                            queue.write().push(track_queue.clone());
                                             active_menu_track.set(None);
                                         },
                                         on_close_menu: move |_| active_menu_track.set(None),

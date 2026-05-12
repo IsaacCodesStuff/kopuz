@@ -53,7 +53,7 @@ pub fn SearchGenreDetail(
                  div {
                      h2 { class: "text-sm font-bold text-white/60 uppercase tracking-widest mb-2", "{i18n::t(\"genre\")}" }
                      h1 { class: "text-5xl font-bold text-white mb-4", "{genre}" }
-                     p { class: "text-slate-400", 
+                     p { class: "text-slate-400",
                          {
                              if genre_tracks.len() == 1 {
                                  i18n::t("track_count_singular").to_string()
@@ -72,6 +72,7 @@ pub fn SearchGenreDetail(
                          let track_key = track.path.display().to_string();
                          let track_menu = track.clone();
                          let track_add = track.clone();
+                         let track_queue = track.clone();
                          let track_delete = track.clone();
                          let is_menu_open = active_menu_track.read().as_ref() == Some(&track.path);
                          let genre_tracks_list: Vec<Track> = genre_tracks.iter().map(|(t, _)| t.clone()).collect();
@@ -108,6 +109,10 @@ pub fn SearchGenreDetail(
                                  on_add_to_playlist: move |_| {
                                      selected_track_for_playlist.set(Some(track_add.path.clone()));
                                      show_playlist_modal.set(true);
+                                     active_menu_track.set(None);
+                                 },
+                                 on_queue: move |_| {
+                                     queue.write().push(track_queue.clone());
                                      active_menu_track.set(None);
                                  },
                                  on_close_menu: move |_| active_menu_track.set(None),

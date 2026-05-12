@@ -129,8 +129,7 @@ pub fn PlaylistDetail(
                                         user_id,
                                         token,
                                     );
-                                    if let Ok(items) =
-                                        remote.get_playlist_entries(&pid_clone).await
+                                    if let Ok(items) = remote.get_playlist_entries(&pid_clone).await
                                     {
                                         let mut new_tracks = Vec::new();
                                         for item in items {
@@ -177,10 +176,7 @@ pub fn PlaylistDetail(
                                                 album: item.album.unwrap_or_default(),
                                                 duration: item.duration.unwrap_or(0),
                                                 khz: item.sampling_rate.unwrap_or(0),
-                                                bitrate: item
-                                                    .bit_rate
-                                                    .unwrap_or(0)
-                                                    .min(255) as u8,
+                                                bitrate: item.bit_rate.unwrap_or(0).min(255) as u8,
                                                 track_number: item.track,
                                                 disc_number: item.disc_number,
                                                 musicbrainz_release_id: None,

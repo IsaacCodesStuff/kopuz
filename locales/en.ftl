@@ -110,12 +110,14 @@ ytdlp_error_output_not_writable = Output directory is not writable: { $path }
 # UI Actions & Buttons
 add_to_favorites = Add to Favorites
 remove_from_favorites = Remove from Favorites
+add_to_queue = Add to Queue
 add_to_playlist = Add to Playlist
 remove_from_playlist = Remove from Playlist
 delete = Delete
 delete_song = Delete Song
 delete_album = Delete Album
 delete_playlist = Delete Playlist
+add_all_to_queue = Add All to Queue
 add_all_to_playlist = Add All to Playlist
 select_all = Select all
 select_all_tracks = Select all tracks

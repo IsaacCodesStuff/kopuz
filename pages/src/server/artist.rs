@@ -712,6 +712,12 @@ pub fn JellyfinArtist(
                                         active_menu_track.set(None);
                                     }
                                 },
+                                on_queue: move |idx: usize| {
+                                    if let Some(track) = artist_tracks().get(idx) {
+                                        queue.write().push(track.clone());
+                                        active_menu_track.set(None);
+                                    }
+                                },
                                 on_delete_track: move |_| active_menu_track.set(None),
                                 on_download_track: move |idx: usize| {
                                     if let Some(track) = artist_tracks().get(idx) {

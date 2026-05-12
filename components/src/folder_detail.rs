@@ -39,6 +39,8 @@ pub fn FolderDetail(
 
     drop(lib);
 
+    let _ = config;
+
     rsx! {
         crate::track_list_view::TrackListView {
             name: folder_name,

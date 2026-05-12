@@ -93,11 +93,13 @@ pub fn JellyfinAlbum(
             .collect::<Vec<_>>()
     });
 
+    let add_all_to_queue_text = i18n::t("add_all_to_queue").to_string();
     let add_all_to_playlist_text = i18n::t("add_all_to_playlist").to_string();
     let remove_from_cache_text = i18n::t("remove_from_cache").to_string();
 
     let album_menu_actions = vec![
-        MenuAction::new(add_all_to_playlist_text.as_str(), "fa-solid fa-list-music"),
+        MenuAction::new(add_all_to_queue_text.as_str(), "fa-solid fa-list-ul"),
+        MenuAction::new(add_all_to_playlist_text.as_str(), "fa-solid fa-plus"),
         MenuAction::new(remove_from_cache_text.as_str(), "fa-solid fa-trash").destructive(),
     ];
 
@@ -162,10 +164,29 @@ pub fn JellyfinAlbum(
                                                     open_album_menu.set(None);
                                                     match idx {
                                                         0 => {
+                                                            let mut tracks_for_queue: Vec<_> = library
+                                                                .read()
+                                                                .jellyfin_tracks
+                                                                .iter()
+                                                                .filter(|t| t.album_id == id)
+                                                                .cloned()
+                                                                .collect();
+                                                            tracks_for_queue.sort_by(|a, b| {
+                                                                let disc_cmp =
+                                                                    a.disc_number.unwrap_or(1).cmp(&b.disc_number.unwrap_or(1));
+                                                                if disc_cmp == std::cmp::Ordering::Equal {
+                                                                    a.track_number.unwrap_or(0).cmp(&b.track_number.unwrap_or(0))
+                                                                } else {
+                                                                    disc_cmp
+                                                                }
+                                                            });
+                                                            queue.write().extend(tracks_for_queue);
+                                                        }
+                                                        1 => {
                                                             pending_album_id_for_playlist.set(Some(id.clone()));
                                                             show_album_playlist_modal.set(true);
                                                         }
-                                                        1 => {
+                                                        2 => {
                                                             let mut lib = library.write();
                                                             let title = lib.jellyfin_albums.iter()
                                                                 .find(|a| a.id == id)
@@ -600,6 +621,7 @@ pub fn JellyfinAlbumDetails(
                             let track_key = track.path.display().to_string();
                             let track_menu = track.clone();
                             let track_add  = track.clone();
+                            let track_queue = track.clone();
                             let track_path = track.path.clone();
                             let track_select = track.path.clone();
                             let is_menu_open = active_menu_track.read().as_ref() == Some(&track.path);
@@ -653,6 +675,10 @@ pub fn JellyfinAlbumDetails(
                                     on_add_to_playlist: move |_| {
                                         selected_track_for_playlist.set(Some(track_add.path.clone()));
                                         show_playlist_modal.set(true);
+                                        active_menu_track.set(None);
+                                    },
+                                    on_queue: move |_| {
+                                        queue.write().push(track_queue.clone());
                                         active_menu_track.set(None);
                                     },
                                     on_close_menu: move |_| active_menu_track.set(None),
