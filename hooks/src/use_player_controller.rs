@@ -1178,7 +1178,7 @@ impl PlayerController {
         }
     }
 
-    pub fn rebuild_shuffle_order(&mut self) {
+    fn rebuild_shuffle_order(&mut self) {
         use rand::seq::SliceRandom;
         let queue_len = self.queue.peek().len();
         let current_idx = *self.current_queue_index.peek();
