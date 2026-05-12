@@ -51,12 +51,14 @@ ytdlp = הורדות
 # UI Actions & Buttons
 add_to_favorites = הוספה למועדפים
 remove_from_favorites = הסרה מהמועדפים
+add_to_queue = הוספה לתור
 add_to_playlist = הוספה לרשימת השמעה
 remove_from_playlist = הסרה מרשימת השמעה
 delete = מחיקה
 delete_song = מחיקת שיר
 delete_album = מחיקת אלבום
 delete_playlist = מחיקת רשימת השמעה
+add_all_to_queue = הוספת הכל לתור
 add_all_to_playlist = הוספת הכל לרשימת השמעה
 select_all = בחר הכל
 select_all_tracks = בחר את כל הרצועות

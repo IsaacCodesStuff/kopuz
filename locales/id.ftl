@@ -102,12 +102,14 @@ ytdlp_error_output_not_writable = Direktori output tidak dapat ditulisi: { $path
 # UI Actions & Buttons
 add_to_favorites = Tambah ke Favorit
 remove_from_favorites = Hapus dari Favorites
+add_to_queue = Tambah ke Antrian
 add_to_playlist = Tambah ke Playlist
 remove_from_playlist = Hapus dari Playlist
 delete = Hapus
 delete_song = Hapus Lagu
 delete_album = Hapus Album
 delete_playlist = Hapus Playlist
+add_all_to_queue = Tambah Semua ke Antrian
 add_all_to_playlist = Tambah Semua ke Playlist
 select_all = Pilih semua
 select_all_tracks = Pilih semua lagu

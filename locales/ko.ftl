@@ -51,12 +51,14 @@ ytdlp = 다운로드
 # UI Actions & Buttons
 add_to_favorites = 즐겨찾기에 추가
 remove_from_favorites = 즐겨찾기에서 제거
+add_to_queue = 대기열에 추가
 add_to_playlist = 재생목록에 추가
 remove_from_playlist = 재생목록에서 제거
 delete = 삭제
 delete_song = 곡 삭제
 delete_album = 앨범 삭제
 delete_playlist = 재생 목록 삭제
+add_all_to_queue = 모두 대기열에 추가
 add_all_to_playlist = 모두 재생목록에 추가
 select_all = 모두 선택
 select_all_tracks = 모든 트랙 선택

@@ -51,12 +51,14 @@ ytdlp = Λήψεις
 # UI Actions & Buttons
 add_to_favorites = Προσθήκη στα Αγαπημένα
 remove_from_favorites = Αφαίρεση από τα Αγαπημένα
+add_to_queue = Προσθήκη στην Ουρά
 add_to_playlist = Προσθήκη στη Λίστα Αναπαραγωγής
 remove_from_playlist = Αφαίρεση από τη Λίστα Αναπαραγωγής
 delete = Διαγραφή
 delete_song = Διαγραφή Τραγουδιού
 delete_album = Διαγραφή Άλμπουμ
 delete_playlist = Διαγραφή Λίστας Αναπαραγωγής
+add_all_to_queue = Προσθήκη Όλων στην Ουρά
 add_all_to_playlist = Προσθήκη Όλων στη Λίστα Αναπαραγωγής
 select_all = Επιλογή όλων
 select_all_tracks = Επιλογή όλων των κομματιών

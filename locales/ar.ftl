@@ -51,12 +51,14 @@ ytdlp = التنزيلات
 # UI Actions & Buttons
 add_to_favorites = إضافة إلى المفضلة
 remove_from_favorites = إزالة من المفضلة
+add_to_queue = إضافة إلى قائمة الانتظار
 add_to_playlist = إضافة إلى قائمة التشغيل
 remove_from_playlist = إزالة من قائمة التشغيل
 delete = حذف
 delete_song = حذف الأغنية
 delete_album = حذف الألبوم
 delete_playlist = حذف قائمة التشغيل
+add_all_to_queue = إضافة الكل إلى قائمة الانتظار
 add_all_to_playlist = إضافة الكل إلى قائمة التشغيل
 select_all = تحديد الكل
 select_all_tracks = تحديد كل المسارات

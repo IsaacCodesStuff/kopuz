@@ -102,12 +102,14 @@ ytdlp_error_output_not_writable = Sem permissão de escrita na pasta de saída: 
 # UI Actions & Buttons
 add_to_favorites = Adicionar aos favoritos
 remove_from_favorites = Remover dos favoritos
+add_to_queue = Adicionar à fila
 add_to_playlist = Adicionar à playlist
 remove_from_playlist = Remover da playlist
 delete = Excluir
 delete_song = Excluir música
 delete_album = Excluir álbum
 delete_playlist = Excluir playlist
+add_all_to_queue = Adicionar tudo à fila
 add_all_to_playlist = Adicionar tudo à playlist
 select_all = Selecionar tudo
 select_all_tracks = Selecionar todas as faixas

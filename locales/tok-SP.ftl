@@ -51,11 +51,13 @@ ytdlp = 󱥖 󱤿
 # UI Actions & Buttons
 add_to_favorites = 󱥄󱥌󱥩󱥅
 remove_from_favorites = 󱥄󱥶󱥧󱥅
+add_to_queue = 󱥄󱥌󱥩󱤾󱤕
 add_to_playlist = 󱥄󱥌󱥩󱤟󱤕
 remove_from_playlist = 󱥄󱥶󱥧󱤟󱤕
 delete = 󱥄󱥶
 delete_song = 󱥄󱥶󱤉󱤕󱤻
 delete_album = 󱥄󱥶󱤉󱤟󱥍󱤕󱥖
+add_all_to_queue = 󱥄󱥌󱤉󱤄󱥩󱤾󱤕
 add_all_to_playlist = 󱥄󱥌󱤉󱤄󱥩󱤟󱤕
 select_all = 󱥄 󱤭 󱤉 󱤄
 select_all_tracks = 󱥄 󱤭 󱤉 󱤕 󱤻 󱤄

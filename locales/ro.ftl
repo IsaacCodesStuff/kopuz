@@ -51,12 +51,14 @@ ytdlp = Descărcări
 # UI Actions & Buttons
 add_to_favorites = Adaugă la Favorite
 remove_from_favorites = Elimină de la Favorite
+add_to_queue = Adaugă la Coadă
 add_to_playlist = Adaugă la Lista de Redare
 remove_from_playlist = Elimină din Lista de Redare
 delete = Șterge
 delete_song = Șterge Piesa
 delete_album = Șterge Albumul
 delete_playlist = Șterge Lista de Redare
+add_all_to_queue = Adaugă toate la Coadă
 add_all_to_playlist = Adaugă toate la Lista de Redare
 select_all = Selectați tot
 select_all_tracks = Selectați toate piesele

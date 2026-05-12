@@ -51,12 +51,14 @@ ytdlp = Загрузки
 # UI Actions & Buttons
 add_to_favorites = Добавить в избранное
 remove_from_favorites = Удалить из избранного
+add_to_queue = Добавить в очередь
 add_to_playlist = Добавить в плейлист
 remove_from_playlist = Удалить из плейлиста
 delete = Удалить
 delete_song = Удалить песню
 delete_album = Удалить альбом
 delete_playlist = Удалить плейлист
+add_all_to_queue = Добавить все в очередь
 add_all_to_playlist = Добавить все в плейлист
 select_all = Выбрать всё
 select_all_tracks = Выбрать все треки

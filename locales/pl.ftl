@@ -51,12 +51,14 @@ ytdlp = Pobieranie
 # UI Actions & Buttons
 add_to_favorites = Dodaj do ulubionych
 remove_from_favorites = Usuń z ulubionych
+add_to_queue = Dodaj do Kolejki
 add_to_playlist = Dodaj do Playlisty
 remove_from_playlist = Usuń z Playlisty
 delete = Usuń
 delete_song = Usuń Piosenkę 
 delete_album = Usuń Album
 delete_playlist = Usuń Playlistę
+add_all_to_queue = Dodaj wszystkie do Kolejki
 add_all_to_playlist = Dodaj wszystkie do Playlisty
 select_all = Zaznacz wszystko
 select_all_tracks = Zaznacz wszystkie utwory

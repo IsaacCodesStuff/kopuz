@@ -51,12 +51,14 @@ ytdlp = İndirmeler
 # UI Actions & Buttons
 add_to_favorites = Favorilere Ekle
 remove_from_favorites = Favorilerden Kaldır
+add_to_queue = Sıraya Ekle
 add_to_playlist = Çalma Listesine Ekle
 remove_from_playlist = Çalma Listesinden Kaldır
 delete = Sil
 delete_song = Şarkıyı Sil
 delete_album = Albümü Sil
 delete_playlist = Çalma Listesini Sil
+add_all_to_queue = Tümünü Sıraya Ekle
 add_all_to_playlist = Tümünü Çalma Listesine Ekle
 select_all = Tümünü seç
 select_all_tracks = Tüm parçaları seç

@@ -51,12 +51,14 @@ ytdlp = ダウンロード
 # UI Actions & Buttons
 add_to_favorites = お気に入りに追加
 remove_from_favorites = お気に入りから削除
+add_to_queue = キューに追加
 add_to_playlist = プレイリストに追加
 remove_from_playlist = プレイリストから削除
 delete = 削除
 delete_song = 曲を削除
 delete_album = アルバムを削除
 delete_playlist = プレイリストを削除
+add_all_to_queue = すべてをキューに追加
 add_all_to_playlist = すべてをプレイリストに追加
 select_all = すべて選択
 select_all_tracks = すべてのトラックを選択

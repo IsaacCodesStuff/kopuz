@@ -51,12 +51,14 @@ ytdlp = kama jo
 # UI Actions & Buttons
 add_to_favorites = o pana tawa olin
 remove_from_favorites = o weka tan olin
+add_to_queue = o pana tawa nasin kalama
 add_to_playlist = o pana tawa kulupu kalama
 remove_from_playlist = o weka tan kulupu kalama
 delete = o weka
 delete_song = o weka e kalama musi
 delete_album = o weka e kulupu pi kalama sama
 delete_playlist = o weka e kulupu musi
+add_all_to_queue = o pana e ale tawa nasin kalama
 add_all_to_playlist = o pana e ale tawa kulupu kalama
 select_all = o luka e ale
 select_all_tracks = o luka e kalama musi ale

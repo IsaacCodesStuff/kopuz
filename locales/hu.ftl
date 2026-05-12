@@ -51,12 +51,14 @@ ytdlp = Letöltések
 # UI Actions & Buttons
 add_to_favorites = Hozzáadás a kedvencekhez
 remove_from_favorites = Eltávolítás a kedvencekből
+add_to_queue = Hozzáadás sorhoz
 add_to_playlist = Hozzáadás lejátszási listához
 remove_from_playlist = Eltávolítás a lejátszási listából
 delete = Törlés
 delete_song = Dal törlése
 delete_album = Album törlése
 delete_playlist = Lejátszási lista törlése
+add_all_to_queue = Összes hozzáadása a sorhoz
 add_all_to_playlist = Összes hozzáadása a lejátszási listához
 select_all = Összes kijelölése
 select_all_tracks = Összes szám kijelölése
