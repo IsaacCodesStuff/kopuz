@@ -1,6 +1,5 @@
 use config::{AppConfig, MusicService, MusicSource};
 use dioxus::prelude::*;
-use player::player;
 use reader::{Library, PlaylistStore};
 use ::server::jellyfin::JellyfinClient;
 use ::server::subsonic::SubsonicClient;
@@ -14,14 +13,6 @@ pub fn Album(
     config: Signal<AppConfig>,
     album_id: Signal<String>,
     playlist_store: Signal<PlaylistStore>,
-    player: Signal<player::Player>,
-    mut is_playing: Signal<bool>,
-    mut current_playing: Signal<u64>,
-    mut current_song_cover_url: Signal<String>,
-    mut current_song_title: Signal<String>,
-    mut current_song_artist: Signal<String>,
-    mut current_song_duration: Signal<u64>,
-    mut current_song_progress: Signal<u64>,
     mut queue: Signal<Vec<reader::models::Track>>,
     mut current_queue_index: Signal<usize>,
 ) -> Element {
@@ -269,15 +260,6 @@ pub fn Album(
                         album_id: album_id.read().clone(),
                         library,
                         playlist_store,
-                        player,
-                        is_playing,
-                        current_song_cover_url,
-                        current_song_title,
-                        current_song_artist,
-                        current_song_duration,
-                        current_song_progress,
-                        queue,
-                        current_queue_index,
                         on_close: move |_| album_id.set(String::new()),
                     }
                 }

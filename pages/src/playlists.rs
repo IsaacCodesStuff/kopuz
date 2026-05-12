@@ -3,7 +3,6 @@ use components::playlist_detail::PlaylistDetail;
 use components::playlist_popups::AddPlaylistPopup;
 use config::{AppConfig, MusicService, MusicSource};
 use dioxus::prelude::*;
-use player::player;
 use reader::{Library, PlaylistStore};
 use ::server::jellyfin::JellyfinClient;
 use ::server::subsonic::SubsonicClient;
@@ -17,16 +16,6 @@ pub fn PlaylistsPage(
     playlist_store: Signal<PlaylistStore>,
     library: Signal<Library>,
     config: Signal<AppConfig>,
-    player: Signal<player::Player>,
-    mut is_playing: Signal<bool>,
-    mut current_playing: Signal<u64>,
-    mut current_song_cover_url: Signal<String>,
-    mut current_song_title: Signal<String>,
-    mut current_song_artist: Signal<String>,
-    mut current_song_duration: Signal<u64>,
-    mut current_song_progress: Signal<u64>,
-    mut queue: Signal<Vec<reader::models::Track>>,
-    mut current_queue_index: Signal<usize>,
     mut selected_playlist_id: Signal<Option<String>>,
 ) -> Element {
     let is_server = config.read().active_source == MusicSource::Server;
@@ -110,7 +99,6 @@ pub fn PlaylistsPage(
                     library,
                     playlist_store,
                     config,
-                    queue,
                     on_close: move |_| selected_folder.set(None),
                 }
             } else if let Some(pid) = selected_playlist_id.read().clone() {
@@ -134,16 +122,6 @@ pub fn PlaylistsPage(
                             playlist_store,
                             library,
                             config,
-                            player,
-                            is_playing,
-                            current_playing,
-                            current_song_cover_url,
-                            current_song_title,
-                            current_song_artist,
-                            current_song_duration,
-                            current_song_progress,
-                            queue,
-                            current_queue_index,
                             on_close: move |_| selected_playlist_id.set(None),
                             is_downloading_all,
                             on_download_all: move |_| {

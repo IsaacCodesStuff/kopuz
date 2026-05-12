@@ -21,4 +21,5 @@ pub mod showcase;
 pub mod sidebar;
 pub mod titlebar;
 pub mod stat_card;
+pub mod track_list_view;
 pub mod track_row;
