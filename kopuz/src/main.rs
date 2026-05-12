@@ -165,6 +165,23 @@ fn sanitize_queue_state(state: PersistedQueueState) -> Option<PersistedQueueStat
             .unwrap_or(0)
     };
 
+    let old_queue_len = survivors
+        .iter()
+        .map(|(old_idx, _)| *old_idx)
+        .max()
+        .map_or(0, |m| m + 1);
+
+    let mut old_to_new_index: Vec<Option<usize>> = vec![None; old_queue_len];
+    for (new_idx, (old_idx, _)) in survivors.iter().enumerate() {
+        old_to_new_index[*old_idx] = Some(new_idx);
+    }
+
+    let shuffle_order: Vec<usize> = state
+        .shuffle_order
+        .into_iter()
+        .filter_map(|old_idx| old_to_new_index.get(old_idx).and_then(|&new_idx| new_idx))
+        .collect();
+
     let queue: Vec<_> = survivors.into_iter().map(|(_, track)| track).collect();
     let progress_secs = if selected_track_survived {
         queue
@@ -180,6 +197,8 @@ fn sanitize_queue_state(state: PersistedQueueState) -> Option<PersistedQueueStat
         queue,
         current_queue_index: restored_index,
         progress_secs,
+        shuffle_order,
+        shuffle_enabled: state.shuffle_enabled,
     })
 }
 
@@ -188,6 +207,8 @@ fn build_queue_state_snapshot(
     current_queue_index: usize,
     current_song_progress: u64,
     is_playing: bool,
+    shuffle_order: &[usize],
+    shuffle_enabled: bool,
 ) -> Option<PersistedQueueState> {
     if queue.is_empty() {
         return None;
@@ -209,6 +230,8 @@ fn build_queue_state_snapshot(
         queue: queue.to_vec(),
         current_queue_index: current_idx,
         progress_secs,
+        shuffle_order: shuffle_order.to_vec(),
+        shuffle_enabled,
     })
 }
 
@@ -221,7 +244,6 @@ fn read_titlebar_mode_from_disk() -> config::TitlebarMode {
         .map(|c| c.titlebar_mode)
         .unwrap_or_default()
 }
-
 
 #[cfg(not(target_arch = "wasm32"))]
 fn thumb_cache_path(file_path: &str) -> std::path::PathBuf {
@@ -801,11 +823,16 @@ fn App() -> Element {
         }
 
         let queue_snapshot = queue.read().clone();
+        let shuffle_order_snapshot = ctrl.shuffle_order.read().clone();
+        let shuffle_enabled_snapshot = *ctrl.shuffle.read();
+
         let queue_state = build_queue_state_snapshot(
             &queue_snapshot,
             *current_queue_index.read(),
             *current_song_progress.read(),
             *is_playing.read(),
+            &shuffle_order_snapshot,
+            shuffle_enabled_snapshot,
         );
 
         if *pending_queue_state_snapshot.peek() != queue_state {
@@ -986,6 +1013,8 @@ fn App() -> Element {
                             queue_state.queue,
                             queue_state.current_queue_index,
                             queue_state.progress_secs,
+                            queue_state.shuffle_order,
+                            queue_state.shuffle_enabled,
                         );
                     }
                 }
@@ -1043,6 +1072,8 @@ fn App() -> Element {
                         queue_state.queue,
                         queue_state.current_queue_index,
                         queue_state.progress_secs,
+                        queue_state.shuffle_order,
+                        queue_state.shuffle_enabled,
                     );
                 }
             }

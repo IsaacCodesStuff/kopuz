@@ -46,6 +46,7 @@ pub fn TrackListView(mut props: TrackListViewProps) -> Element {
     let tracks_select_all = props.tracks.clone();
     let tracks_long_press = props.tracks.clone();
     let tracks_select = props.tracks.clone();
+    let tracks_play_all = props.tracks.clone();
     let tracks_play = props.tracks.clone();
     let tracks_add = props.tracks.clone();
     let tracks_queue = props.tracks.clone();
@@ -101,6 +102,14 @@ pub fn TrackListView(mut props: TrackListViewProps) -> Element {
                                 is_selection_mode.set(false);
                             }
                         }
+                    }
+                },
+                on_play_all: move |_| {
+                    let is_shuffle = *ctrl.shuffle.peek();
+                    if is_shuffle {
+                        ctrl.play_queue_shuffled(tracks_play_all.clone());
+                    } else {
+                        ctrl.play_queue_linear(tracks_play_all.clone());
                     }
                 },
                 on_play: move |idx: usize| {

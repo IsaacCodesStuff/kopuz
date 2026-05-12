@@ -1071,10 +1071,15 @@ impl PlayerController {
     }
 
     fn play_next_with_transition(&mut self, allow_crossfade: bool) {
+        if *self.is_loading.peek() {
+            self.skip_in_progress.set(false);
+        }
+
         let idx = *self.current_queue_index.peek();
         let queue_len = self.queue.peek().len();
 
         if queue_len == 0 {
+            self.skip_in_progress.set(false);
             return;
         }
 
@@ -1083,95 +1088,64 @@ impl PlayerController {
 
         match loop_mode {
             LoopMode::Track => {
-                if allow_crossfade {
-                    let current_idx = *self.current_queue_index.peek();
-                    self.history.with_mut(|h| {
-                        if h.last() != Some(&current_idx) {
-                            h.push(current_idx);
-                        }
-                    });
-                    self.play_track_no_history_with_transition(idx, true);
-                } else {
-                    self.play_track_no_history_without_crossfade(idx);
-                }
+                self.play_track_with_history(idx, allow_crossfade);
             }
             _ => {
                 if shuffle && queue_len > 1 {
-                    let next_idx = self.shuffle_order.with_mut(|order| order.pop());
+                    let is_empty = self.shuffle_order.peek().is_empty();
+
+                    // When the shuffled list is exhausted in queue-loop mode,
+                    // rebuild it so playback continues in a new random order
+                    // starting from the next track after the current one.
+                    if is_empty && loop_mode == LoopMode::Queue {
+                        self.rebuild_shuffle_order();
+                    }
+
+                    let next_idx = self.shuffle_order.with_mut(|order| {
+                        if !order.is_empty() {
+                            Some(order.remove(0))
+                        } else {
+                            None
+                        }
+                    });
+
                     match next_idx {
                         Some(i) => {
-                            if allow_crossfade {
-                                let current_idx = *self.current_queue_index.peek();
-                                self.history.with_mut(|h| {
-                                    if h.last() != Some(&current_idx) {
-                                        h.push(current_idx);
-                                    }
-                                });
-                                self.play_track_no_history_with_transition(i, true);
-                            } else {
-                                self.play_track_no_history_without_crossfade(i);
-                            }
+                            self.play_track_with_history(i, allow_crossfade);
                         }
                         None => {
-                            if loop_mode == LoopMode::Queue {
-                                self.rebuild_shuffle_order();
-                                let i = self.shuffle_order.with_mut(|order| order.pop()).unwrap_or(0);
-                                if allow_crossfade {
-                                    let current_idx = *self.current_queue_index.peek();
-                                    self.history.with_mut(|h| {
-                                        if h.last() != Some(&current_idx) {
-                                            h.push(current_idx);
-                                        }
-                                    });
-                                    self.play_track_no_history_with_transition(i, true);
-                                } else {
-                                    self.play_track_no_history_without_crossfade(i);
-                                }
-                            } else {
-                                self.is_playing.set(false);
-                            }
+                            self.skip_in_progress.set(false);
+                            self.player.write().pause();
+                            self.is_playing.set(false);
                         }
                     }
                 } else if shuffle && queue_len == 1 {
-                    if allow_crossfade {
-                        let current_idx = *self.current_queue_index.peek();
-                        self.history.with_mut(|h| {
-                            if h.last() != Some(&current_idx) {
-                                h.push(current_idx);
-                            }
-                        });
-                        self.play_track_no_history_with_transition(0, true);
-                    } else {
-                        self.play_track_no_history_without_crossfade(0);
-                    }
+                    self.play_track_with_history(0, allow_crossfade);
                 } else if idx + 1 < queue_len {
-                    if allow_crossfade {
-                        let current_idx = *self.current_queue_index.peek();
-                        self.history.with_mut(|h| {
-                            if h.last() != Some(&current_idx) {
-                                h.push(current_idx);
-                            }
-                        });
-                        self.play_track_no_history_with_transition(idx + 1, true);
-                    } else {
-                        self.play_track_no_history_without_crossfade(idx + 1);
-                    }
+                    self.play_track_with_history(idx + 1, allow_crossfade);
                 } else if loop_mode == LoopMode::Queue {
-                    if allow_crossfade {
-                        let current_idx = *self.current_queue_index.peek();
-                        self.history.with_mut(|h| {
-                            if h.last() != Some(&current_idx) {
-                                h.push(current_idx);
-                            }
-                        });
-                        self.play_track_no_history_with_transition(0, true);
-                    } else {
-                        self.play_track_no_history_without_crossfade(0);
-                    }
+                    self.play_track_with_history(0, allow_crossfade);
                 } else {
+                    self.skip_in_progress.set(false);
+                    self.player.write().pause();
                     self.is_playing.set(false);
                 }
             }
+        }
+    }
+
+    fn play_track_with_history(&mut self, track_idx: usize, allow_crossfade: bool) {
+        let current_idx = *self.current_queue_index.peek();
+        self.history.with_mut(|h| {
+            if h.last() != Some(&current_idx) {
+                h.push(current_idx);
+            }
+        });
+
+        if allow_crossfade {
+            self.play_track_no_history_with_transition(track_idx, true);
+        } else {
+            self.play_track_no_history_without_crossfade(track_idx);
         }
     }
 
@@ -1180,9 +1154,7 @@ impl PlayerController {
         let back_behavior = self.config.peek().back_behavior;
 
         if back_behavior == BackBehavior::RewindThenPrev && progress > 3 {
-            self.player
-                .write()
-                .seek(std::time::Duration::ZERO);
+            self.player.write().seek(std::time::Duration::ZERO);
             self.current_song_progress.set(0);
             return;
         }
@@ -1209,10 +1181,42 @@ impl PlayerController {
     fn rebuild_shuffle_order(&mut self) {
         use rand::seq::SliceRandom;
         let queue_len = self.queue.peek().len();
-        let current = *self.current_queue_index.peek();
-        let mut order: Vec<usize> = (0..queue_len).filter(|&i| i != current).collect();
-        order.shuffle(&mut rand::thread_rng());
-        self.shuffle_order.set(order);
+        let current_idx = *self.current_queue_index.peek();
+
+        // Tracks that come after the current position (play these first).
+        let mut ahead: Vec<usize> = (current_idx + 1..queue_len).collect();
+        ahead.shuffle(&mut rand::thread_rng());
+
+        // Tracks that wrap around from the beginning (play after the ahead group).
+        let mut wrapped: Vec<usize> = (0..current_idx).collect();
+        wrapped.shuffle(&mut rand::thread_rng());
+
+        ahead.extend(wrapped);
+        self.shuffle_order.set(ahead);
+    }
+
+    pub fn play_queue_shuffled(&mut self, tracks: Vec<Track>) {
+        use rand::Rng;
+        let queue_len = tracks.len();
+        if queue_len == 0 {
+            return;
+        }
+
+        self.queue.set(tracks);
+        self.shuffle_order.set(Vec::new());
+        let start = rand::thread_rng().gen_range(0..queue_len);
+
+        self.play_track(start);
+        self.rebuild_shuffle_order();
+    }
+
+    pub fn play_queue_linear(&mut self, tracks: Vec<Track>) {
+        if tracks.is_empty() {
+            return;
+        }
+        self.queue.set(tracks);
+        self.shuffle_order.set(Vec::new());
+        self.play_track(0);
     }
 
     pub fn toggle_shuffle(&mut self) {
@@ -1282,6 +1286,8 @@ impl PlayerController {
         queue: Vec<Track>,
         current_queue_index: usize,
         progress_secs: u64,
+        shuffle_order: Vec<usize>,
+        shuffle_enabled: bool,
     ) {
         self.clear_pending_crossfade_ui();
         self.player.write().stop();
@@ -1290,6 +1296,8 @@ impl PlayerController {
         self.skip_in_progress.set(false);
         self.history.set(Vec::new());
         self.queue.set(queue);
+        self.shuffle.set(shuffle_enabled);
+        self.shuffle_order.set(shuffle_order);
 
         let queue_len = self.queue.peek().len();
         if queue_len == 0 {
@@ -1300,7 +1308,9 @@ impl PlayerController {
         }
 
         let idx = current_queue_index.min(queue_len - 1);
-        let track = self.current_track(idx).expect("queue index should be valid");
+        let track = self
+            .current_track(idx)
+            .expect("queue index should be valid");
         let progress_secs = progress_secs.min(track.duration);
 
         self.hydrate_current_track_metadata(idx, progress_secs);

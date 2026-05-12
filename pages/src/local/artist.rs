@@ -3,6 +3,7 @@ use components::playlist_modal::PlaylistModal;
 use components::selection_bar::SelectionBar;
 use config::{AppConfig, ArtistViewOrder};
 use dioxus::prelude::*;
+use rand::seq::SliceRandom;
 use reader::{Library, PlaylistStore};
 use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
@@ -456,6 +457,14 @@ pub fn LocalArtist(
                                         }
                                     }
                                 },
+                                on_play_all: move |_| {
+                                       let is_shuffle = *ctrl.shuffle.peek();
+                                       if is_shuffle {
+                                           ctrl.play_queue_shuffled(artist_tracks());
+                                       } else {
+                                           ctrl.play_queue_linear(artist_tracks());
+                                       }
+                                   },
                                 on_play: move |idx: usize| {
                                     let tracks = artist_tracks();
                                     queue.set(tracks.clone());

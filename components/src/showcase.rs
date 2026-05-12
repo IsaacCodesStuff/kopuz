@@ -2,6 +2,7 @@ use crate::reorder_buttons::ReorderButtons;
 use crate::track_row::TrackRow;
 use config::{AppConfig, MusicService, MusicSource};
 use dioxus::prelude::*;
+use hooks::use_player_controller::PlayerController;
 use reader::{Library, Track};
 use std::collections::HashSet;
 use std::path::PathBuf;
@@ -13,6 +14,7 @@ pub struct ShowcaseProps {
     pub cover_url: Option<utils::CoverUrl>,
     pub tracks: Vec<Track>,
     pub library: Signal<Library>,
+    pub on_play_all: EventHandler<()>,
     pub on_play: EventHandler<usize>,
     pub on_queue: Option<EventHandler<usize>>,
     pub on_add_to_playlist: Option<EventHandler<usize>>,
@@ -47,6 +49,7 @@ pub struct ShowcaseProps {
 
 #[component]
 pub fn Showcase(props: ShowcaseProps) -> Element {
+    let mut ctrl = use_context::<PlayerController>();
     let config = use_context::<Signal<AppConfig>>();
     let total_seconds: u64 = props.tracks.iter().map(|t| t.duration).sum();
     let duration_min = total_seconds / 60;
@@ -113,9 +116,19 @@ pub fn Showcase(props: ShowcaseProps) -> Element {
 
                 div { class: "flex items-center gap-4",
                      if !props.tracks.is_empty() {
-                         button {
+                        button {
+                            class: format!("w-14 h-14 rounded-full flex items-center justify-center {}", if *ctrl.shuffle.read() { "text-white" } else { "text-slate-400 hover:text-white" }),
+                            title: if *ctrl.shuffle.read() {
+                                i18n::t("shuffle_on").to_string()
+                            } else {
+                                i18n::t("shuffle_off").to_string()
+                            },
+                            onclick: move |_| ctrl.toggle_shuffle(),
+                            i { class: "fa-solid fa-shuffle text-xl ml-1" }
+                        }
+                        button {
                              class: "w-14 h-14 rounded-full bg-indigo-500 hover:bg-indigo-400 text-black flex items-center justify-center transition-transform hover:scale-105",
-                             onclick: move |_| props.on_play.call(0),
+                             onclick: move |_| props.on_play_all.call(()),
                              i { class: "fa-solid fa-play text-xl ml-1" }
                          }
                          if props.on_download_all.is_some() || props.on_delete_all.is_some() {

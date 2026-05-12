@@ -17,6 +17,10 @@ pub struct PersistedQueueState {
     pub current_queue_index: usize,
     #[serde(default)]
     pub progress_secs: u64,
+    #[serde(default)]
+    pub shuffle_order: Vec<usize>,
+    #[serde(default)]
+    pub shuffle_enabled: bool,
 }
 
 impl Default for PersistedQueueState {
@@ -26,6 +30,8 @@ impl Default for PersistedQueueState {
             queue: Vec::new(),
             current_queue_index: 0,
             progress_secs: 0,
+            shuffle_order: Vec::new(),
+            shuffle_enabled: false,
         }
     }
 }

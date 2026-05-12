@@ -5,6 +5,7 @@ use components::selection_bar::SelectionBar;
 use components::track_row::TrackRow;
 use config::{AppConfig, MusicService};
 use dioxus::prelude::*;
+use rand::seq::SliceRandom;
 use reader::{Library, PlaylistStore};
 use server::jellyfin::JellyfinClient;
 use server::subsonic::SubsonicClient;
@@ -506,15 +507,28 @@ pub fn JellyfinAlbumDetails(
                 div { class: "flex items-center gap-4",
                     if !album_tracks().is_empty() {
                         button {
+                            class: format!("w-14 h-14 rounded-full flex items-center justify-center {}", if *ctrl.shuffle.read() { "text-white" } else { "text-slate-400 hover:text-white" }),
+                            title: if *ctrl.shuffle.read() {
+                                i18n::t("shuffle_on").to_string()
+                            } else {
+                                i18n::t("shuffle_off").to_string()
+                            },
+                            onclick: move |_| ctrl.toggle_shuffle(),
+                            i { class: "fa-solid fa-shuffle text-xl ml-1" }
+                        }
+                        button {
                             class: "w-14 h-14 rounded-full bg-indigo-500 hover:bg-indigo-400 text-black flex items-center justify-center transition-transform hover:scale-105",
                             onclick: {
-                                let tracks_for_play: Vec<reader::models::Track> =
-                                    album_tracks().iter().map(|(t, _)| t.clone()).collect();
+                                let tracks_for_play: Vec<reader::models::Track> = album_tracks().iter().map(|(t, _)| t.clone()).collect();
                                 move |_| {
-                                    queue.set(tracks_for_play.clone());
-                                    ctrl.play_track(0);
+                                    let is_shuffle = *ctrl.shuffle.peek();
+                                    if is_shuffle {
+                                        ctrl.play_queue_shuffled(tracks_for_play.clone());
+                                    } else {
+                                        ctrl.play_queue_linear(tracks_for_play.clone());
+                                    }
                                 }
-                            },
+                              },
                             i { class: "fa-solid fa-play text-xl ml-1" }
                         }
                         {
