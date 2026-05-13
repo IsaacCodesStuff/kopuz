@@ -293,12 +293,14 @@ impl PlayerController {
     }
 
     pub fn play_track(&mut self, idx: usize) {
-        let current_idx = *self.current_queue_index.peek();
-        self.history.with_mut(|h| {
-            if h.last() != Some(&current_idx) {
-                h.push(current_idx);
-            }
-        });
+        if *self.is_playing.peek() || self.player.peek().can_resume() {
+            let current_idx = *self.current_queue_index.peek();
+            self.history.with_mut(|h| {
+                if h.last() != Some(&current_idx) {
+                    h.push(current_idx);
+                }
+            });
+        }
         self.play_track_no_history_without_crossfade(idx);
     }
 
@@ -1174,18 +1176,12 @@ impl PlayerController {
             return;
         }
 
-        if idx > 0 {
-            if *self.shuffle.peek() {
-                self.play_track_no_history_without_crossfade(idx);
-            } else {
-                self.play_track_no_history_without_crossfade(idx - 1);
-            }
+        if *self.shuffle.peek() {
+            self.play_track_no_history_without_crossfade(idx);
+        } else if idx > 0 {
+            self.play_track_no_history_without_crossfade(idx - 1);
         } else if *self.loop_mode.peek() == LoopMode::Queue {
-            if *self.shuffle.peek() {
-                self.play_track_no_history_without_crossfade(idx);
-            } else {
-                self.play_track_no_history_without_crossfade(queue_len - 1);
-            }
+            self.play_track_no_history_without_crossfade(queue_len - 1);
         }
     }
 
@@ -1215,9 +1211,10 @@ impl PlayerController {
 
         self.queue.set(tracks);
         self.shuffle_order.set(Vec::new());
+        self.history.set(Vec::new());
         let start = rand::thread_rng().gen_range(0..queue_len);
 
-        self.play_track(start);
+        self.play_track_no_history(start);
         self.rebuild_shuffle_order();
     }
 
@@ -1227,7 +1224,8 @@ impl PlayerController {
         }
         self.queue.set(tracks);
         self.shuffle_order.set(Vec::new());
-        self.play_track(0);
+        self.history.set(Vec::new());
+        self.play_track_no_history(0);
     }
 
     pub fn add_to_queue(&mut self, tracks: impl IntoIterator<Item = Track>) {
