@@ -237,6 +237,17 @@ pub fn LocalArtist(
                     if is_selection_mode() {
                         SelectionBar {
                             count: selected_tracks.read().len(),
+                            on_add_to_queue: move |_| {
+                                let selected = selected_tracks.read().clone();
+                                if selected.is_empty() {
+                                    return;
+                                }
+                                let tracks = artist_tracks();
+                                for track in tracks.iter().filter(|t| selected.contains(&t.path)) {
+                                    ctrl.add_to_queue(vec![track.clone()]);
+                                }
+                                clear_selection(&mut is_selection_mode, &mut selected_tracks);
+                            },
                             on_add_to_playlist: move |_| show_playlist_modal.set(true),
                             on_delete: move |_| {
                                 let paths: Vec<_> = selected_tracks.read().iter().cloned().collect();

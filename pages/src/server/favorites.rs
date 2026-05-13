@@ -127,6 +127,7 @@ pub fn JellyfinFavorites(
     let queue_tracks: Vec<reader::models::Track> =
         displayed_tracks.iter().map(|(t, _)| t.clone()).collect();
 
+    let displayed_tracks_for_selection = displayed_tracks.clone();
     let is_empty = displayed_tracks.is_empty();
 
     let tracks_nodes = displayed_tracks
@@ -337,6 +338,17 @@ pub fn JellyfinFavorites(
                 SelectionBar {
                     count: selected_tracks.read().len(),
                     show_delete: false,
+                    on_add_to_queue: move |_| {
+                        let selected = selected_tracks.read().clone();
+                        if selected.is_empty() {
+                            return;
+                        }
+                        for (track, _) in displayed_tracks_for_selection.iter().filter(|(t, _)| selected.contains(&t.path)) {
+                            ctrl.add_to_queue(vec![track.clone()]);
+                        }
+                        is_selection_mode.set(false);
+                        selected_tracks.write().clear();
+                    },
                     on_add_to_playlist: move |_| {
                         show_playlist_modal.set(true);
                     },

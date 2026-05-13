@@ -237,6 +237,18 @@ div {
             if is_selection_mode() {
                 SelectionBar {
                     count: selected_tracks.read().len(),
+                    on_add_to_queue: move |_| {
+                        let selected = selected_tracks.read().clone();
+                        if selected.is_empty() {
+                            return;
+                        }
+                        let tracks = displayed_tracks.read();
+                        for track in tracks.iter().filter(|t| selected.contains(&t.path)) {
+                            ctrl.add_to_queue(vec![track.clone()]);
+                        }
+                        selected_tracks.write().clear();
+                        is_selection_mode.set(false);
+                    },
                     on_add_to_playlist: move |_| {
                         show_playlist_modal.set(true);
                     },

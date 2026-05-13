@@ -461,6 +461,18 @@ pub fn JellyfinAlbumDetails(
                 SelectionBar {
                     count: selected_tracks.read().len(),
                     show_delete: false,
+                    on_add_to_queue: move |_| {
+                        let selected = selected_tracks.read().clone();
+                        if selected.is_empty() {
+                            return;
+                        }
+                        let tracks = album_tracks();
+                        for (track, _) in tracks.iter().filter(|(t, _)| selected.contains(&t.path)) {
+                            ctrl.add_to_queue(vec![track.clone()]);
+                        }
+                        is_selection_mode.set(false);
+                        selected_tracks.write().clear();
+                    },
                     on_add_to_playlist: move |_| {
                         show_playlist_modal.set(true);
                     },
