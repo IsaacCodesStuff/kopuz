@@ -2,7 +2,7 @@ use components::playlist_modal::PlaylistModal;
 use components::selection_bar::SelectionBar;
 use components::stat_card::StatCard;
 use components::track_row::TrackRow;
-use config::AppConfig;
+use config::{AppConfig, UiStyle};
 use dioxus::prelude::*;
 use hooks::use_library_items::use_library_items;
 use hooks::use_player_controller::PlayerController;
@@ -142,6 +142,7 @@ div {
                         is_currently_playing,
                         is_selection_mode: is_selection_mode(),
                         is_selected,
+                        row_num: Some(idx + 1),
                         on_long_press: move |_| {
                             is_selection_mode.set(true);
                             selected_tracks.write().insert(track_path.clone());
@@ -191,9 +192,11 @@ div {
         .collect::<Vec<_>>()
     };
 
+    let is_modern = config.read().ui_style == UiStyle::Modern;
+
     rsx! {
              div {
-                 class: "p-8 relative min-h-full flex flex-col",
+                 class: if is_modern { "px-6 pt-6 pb-24 relative min-h-full flex flex-col" } else { "p-8 relative min-h-full flex flex-col" },
 
             if *show_playlist_modal.read() {
                 PlaylistModal {
@@ -274,7 +277,18 @@ div {
 
             div {
                 class: "flex items-center justify-between mb-6",
-                h1 { class: "text-3xl font-bold text-white", "{i18n::t(\"your_library\")}" }
+                if is_modern {
+                    div {
+                        p {
+                            class: "text-[10px] font-bold tracking-widest uppercase mb-0.5",
+                            style: "color: rgba(255,255,255,0.35);",
+                            "{i18n::t(\"library\")}"
+                        }
+                        h1 { class: "text-2xl font-bold text-white", "{i18n::t(\"your_library\")}" }
+                    }
+                } else {
+                    h1 { class: "text-3xl font-bold text-white", "{i18n::t(\"your_library\")}" }
+                }
                 button {
                     class: "text-white/60 hover:text-white transition-colors p-2 rounded-full hover:bg-white/10",
                     title: i18n::t("rescan_library").to_string(),
@@ -356,6 +370,18 @@ div {
                         onclick: move |_| sort_order.set(config::SortOrder::Album),
                         "{i18n::t(\"album\")}"
                     }
+                }
+            }
+
+            if is_modern {
+                div {
+                    class: "grid px-3 py-2 text-[10px] font-bold uppercase tracking-widest border-b mb-1",
+                    style: "grid-template-columns: 40px 1fr 180px 56px 40px; color: rgba(255,255,255,0.25); border-color: rgba(255,255,255,0.06);",
+                    div {}
+                    div { "{i18n::t(\"title\")}" }
+                    div { "{i18n::t(\"artist\")}" }
+                    div { class: "text-right pr-2", i { class: "fa-regular fa-clock" } }
+                    div {}
                 }
             }
 

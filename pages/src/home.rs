@@ -1,4 +1,4 @@
-use config::{AppConfig, MusicSource};
+use config::{AppConfig, MusicSource, UiStyle};
 use dioxus::prelude::*;
 use reader::{FavoritesStore, Library, PlaylistStore};
 
@@ -17,13 +17,20 @@ pub fn Home(
 ) -> Element {
     let config = use_context::<Signal<AppConfig>>();
     let is_server = config.read().active_source == MusicSource::Server;
+    let is_modern = config.read().ui_style == UiStyle::Modern;
 
     rsx! {
         div {
-            class: "p-8 space-y-12 pb-32 animate-fade-in w-full max-w-[1600px] mx-auto",
+            class: if is_modern {
+                "px-6 pt-4 pb-24 w-full max-w-[1600px] mx-auto"
+            } else {
+                "p-8 space-y-12 pb-32 animate-fade-in w-full max-w-[1600px] mx-auto"
+            },
 
-            div { class: "flex items-center justify-between mb-2",
-                h1 { class: "text-4xl font-black text-white tracking-tight", "{i18n::t(\"home\")}" }
+            if !is_modern {
+                div { class: "flex items-center justify-between mb-2",
+                    h1 { class: "text-4xl font-black text-white tracking-tight", "{i18n::t(\"home\")}" }
+                }
             }
 
             if is_server {

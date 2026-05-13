@@ -1,3 +1,4 @@
+use config::{AppConfig, UiStyle};
 use dioxus::prelude::*;
 use rand::seq::SliceRandom;
 use rand::thread_rng;
@@ -85,6 +86,9 @@ pub fn LocalHome(
         unique_albums
     });
 
+    let config = use_context::<Signal<AppConfig>>();
+    let is_modern = config.read().ui_style == UiStyle::Modern;
+
     let scroll_container = move |id: &str, direction: i32| {
         let script = format!(
             "document.getElementById('{}').scrollBy({{ left: {}, behavior: 'smooth' }})",
@@ -96,7 +100,7 @@ pub fn LocalHome(
 
     rsx! {
         div {
-            section { class: "relative h-[350px] rounded-3xl overflow-hidden mb-12",
+            section { class: if is_modern { "relative h-[300px] rounded-xl overflow-hidden mb-10" } else { "relative h-[350px] rounded-3xl overflow-hidden mb-12" },
                 {
                     let local_list = local_shuffled.read();
                     if let Some(album) = local_list.first() {
@@ -184,45 +188,82 @@ pub fn LocalHome(
                 let local_list = local_shuffled.read();
                 if !local_list.is_empty() {
                     rsx! {
-                        section { class: "cv-section mb-12",
+                        section { class: if is_modern { "mb-10" } else { "cv-section mb-12" },
                             div { class: "flex items-end justify-between mb-6 text-white",
                                 div {
-                                    h2 { class: "text-3xl font-extrabold tracking-tight", "{i18n::t(\"listen_now\")}" }
+                                    if is_modern {
+                                        p { class: "text-[10px] font-bold tracking-widest uppercase mb-0.5", style: "color: rgba(255,255,255,0.35);", "{i18n::t(\"music\")}" }
+                                    }
+                                    h2 { class: if is_modern { "text-2xl font-bold text-white" } else { "text-3xl font-extrabold tracking-tight" }, "{i18n::t(\"listen_now\")}" }
                                 }
                             }
-                            div { class: "grid grid-cols-[repeat(auto-fill,minmax(350px,1fr))] gap-4",
-                                for album in local_list.iter().skip(1).take(8) {
-                                    div {
-                                        class: "flex items-center bg-white/5 hover:bg-white/10 border border-white/5 rounded-2xl cursor-pointer transition-all duration-300 group overflow-hidden pr-4",
-                                        onclick: {
-                                            let id = album.id.clone();
-                                            move |_| on_select_album.call(id.clone())
-                                        },
-                                        div { class: "w-16 h-16 md:w-20 md:h-20 flex-shrink-0 bg-stone-800/50 relative overflow-hidden gpu-hover",
-                                            if let Some(url) = utils::format_artwork_url(album.cover_path.as_ref()) {
-                                                img { src: "{url.as_ref()}", class: "w-full h-full object-cover group-hover:scale-105 transition-transform duration-500", decoding: "async", loading: "lazy" }
-                                            } else {
-                                                div { class: "w-full h-full flex items-center justify-center",
-                                                    i { class: "fa-solid fa-compact-disc text-xl text-white/20" }
+                            if is_modern {
+                                div { class: "flex overflow-x-auto gap-4 pb-4 scrollbar-hide scroll-smooth -mx-2 px-2",
+                                    for album in local_list.iter().skip(1).take(10) {
+                                        div {
+                                            class: "flex-none w-40 group cursor-pointer",
+                                            onclick: {
+                                                let id = album.id.clone();
+                                                move |_| on_select_album.call(id.clone())
+                                            },
+                                            div { class: "aspect-square rounded-lg bg-stone-800 mb-2 overflow-hidden relative",
+                                                if let Some(url) = utils::format_artwork_url(album.cover_path.as_ref()) {
+                                                    img { src: "{url.as_ref()}", class: "w-full h-full object-cover group-hover:scale-105 transition-transform duration-500", decoding: "async", loading: "lazy" }
+                                                } else {
+                                                    div { class: "w-full h-full flex items-center justify-center",
+                                                        i { class: "fa-solid fa-compact-disc text-2xl text-white/20" }
+                                                    }
+                                                }
+                                                div {
+                                                    class: "absolute right-2 bottom-2 w-9 h-9 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all translate-y-2 group-hover:translate-y-0",
+                                                    style: "background: var(--color-indigo-500);",
+                                                    onclick: {
+                                                        let id = album.id.clone();
+                                                        move |evt| { evt.stop_propagation(); on_play_album.call(id.clone()); }
+                                                    },
+                                                    i { class: "fa-solid fa-play text-white text-xs ml-0.5" }
                                                 }
                                             }
-                                            div { class: "absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors duration-300" }
+                                            h3 { class: "text-white font-semibold truncate text-sm", "{album.title}" }
+                                            p { class: "text-xs truncate mt-0.5", style: "color: rgba(255,255,255,0.45);", "{album.artist}" }
                                         }
-                                        div { class: "p-4 flex-1 min-w-0 flex flex-col justify-center",
-                                            h3 { class: "text-white font-bold truncate text-sm md:text-base", "{album.title}" }
-                                            p { class: "text-xs text-white/50 truncate font-semibold mt-1", "{album.artist}" }
-                                        }
-                                        div { class: "opacity-0 group-hover:opacity-100 transition-all duration-300",
-                                            div {
-                                                class: "w-8 h-8 rounded-full bg-white/10 flex items-center justify-center hover:bg-white/20 transition-colors",
-                                                onclick: {
-                                                    let id = album.id.clone();
-                                                    move |evt| {
-                                                        evt.stop_propagation();
-                                                        on_play_album.call(id.clone());
+                                    }
+                                }
+                            } else {
+                                div { class: "grid grid-cols-[repeat(auto-fill,minmax(350px,1fr))] gap-4",
+                                    for album in local_list.iter().skip(1).take(8) {
+                                        div {
+                                            class: "flex items-center bg-white/5 hover:bg-white/10 border border-white/5 rounded-2xl cursor-pointer transition-all duration-300 group overflow-hidden pr-4",
+                                            onclick: {
+                                                let id = album.id.clone();
+                                                move |_| on_select_album.call(id.clone())
+                                            },
+                                            div { class: "w-16 h-16 md:w-20 md:h-20 flex-shrink-0 bg-stone-800/50 relative overflow-hidden gpu-hover",
+                                                if let Some(url) = utils::format_artwork_url(album.cover_path.as_ref()) {
+                                                    img { src: "{url.as_ref()}", class: "w-full h-full object-cover group-hover:scale-105 transition-transform duration-500", decoding: "async", loading: "lazy" }
+                                                } else {
+                                                    div { class: "w-full h-full flex items-center justify-center",
+                                                        i { class: "fa-solid fa-compact-disc text-xl text-white/20" }
                                                     }
-                                                },
-                                                i { class: "fa-solid fa-play text-white/80 text-xs" }
+                                                }
+                                                div { class: "absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors duration-300" }
+                                            }
+                                            div { class: "p-4 flex-1 min-w-0 flex flex-col justify-center",
+                                                h3 { class: "text-white font-bold truncate text-sm md:text-base", "{album.title}" }
+                                                p { class: "text-xs text-white/50 truncate font-semibold mt-1", "{album.artist}" }
+                                            }
+                                            div { class: "opacity-0 group-hover:opacity-100 transition-all duration-300",
+                                                div {
+                                                    class: "w-8 h-8 rounded-full bg-white/10 flex items-center justify-center hover:bg-white/20 transition-colors",
+                                                    onclick: {
+                                                        let id = album.id.clone();
+                                                        move |evt| {
+                                                            evt.stop_propagation();
+                                                            on_play_album.call(id.clone());
+                                                        }
+                                                    },
+                                                    i { class: "fa-solid fa-play text-white/80 text-xs" }
+                                                }
                                             }
                                         }
                                     }
@@ -236,9 +277,14 @@ pub fn LocalHome(
             }
 
             if !artists().is_empty() {
-                section { class: "cv-section mt-12",
+                section { class: if is_modern { "mt-10" } else { "cv-section mt-12" },
                     div { class: "flex items-center justify-between mb-6",
-                        h2 { class: "text-2xl font-bold text-white tracking-tight", "{i18n::t(\"top_artists\")}" }
+                        div {
+                            if is_modern {
+                                p { class: "text-[10px] font-bold tracking-widest uppercase mb-0.5", style: "color: rgba(255,255,255,0.35);", "{i18n::t(\"artists\")}" }
+                            }
+                            h2 { class: if is_modern { "text-2xl font-bold text-white" } else { "text-2xl font-bold text-white tracking-tight" }, "{i18n::t(\"top_artists\")}" }
+                        }
                         div { class: "flex gap-2",
                             button {
                                 class: "w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center text-white transition-all",
@@ -282,9 +328,14 @@ pub fn LocalHome(
             }
 
             if !recent_albums().is_empty() {
-                section { class: "cv-section mt-12",
+                section { class: if is_modern { "mt-10" } else { "cv-section mt-12" },
                     div { class: "flex items-center justify-between mb-6",
-                        h2 { class: "text-2xl font-bold text-white tracking-tight", "{i18n::t(\"new_releases\")}" }
+                        div {
+                            if is_modern {
+                                p { class: "text-[10px] font-bold tracking-widest uppercase mb-0.5", style: "color: rgba(255,255,255,0.35);", "{i18n::t(\"albums\")}" }
+                            }
+                            h2 { class: if is_modern { "text-2xl font-bold text-white" } else { "text-2xl font-bold text-white tracking-tight" }, "{i18n::t(\"new_releases\")}" }
+                        }
                         div { class: "flex gap-2",
                             button {
                                 class: "w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center text-white transition-all",
@@ -338,10 +389,13 @@ pub fn LocalHome(
             }
 
             if !recent_playlists().is_empty() {
-                section { class: "cv-section mt-16",
+                section { class: if is_modern { "mt-10" } else { "cv-section mt-16" },
                     div { class: "flex items-center justify-between mb-6",
                         div {
-                            h2 { class: "text-2xl font-bold text-white tracking-tight", "{i18n::t(\"playlists\")}" }
+                            if is_modern {
+                                p { class: "text-[10px] font-bold tracking-widest uppercase mb-0.5", style: "color: rgba(255,255,255,0.35);", "{i18n::t(\"library\")}" }
+                            }
+                            h2 { class: if is_modern { "text-2xl font-bold text-white" } else { "text-2xl font-bold text-white tracking-tight" }, "{i18n::t(\"playlists\")}" }
                         }
                         div { class: "flex gap-2",
                             button {

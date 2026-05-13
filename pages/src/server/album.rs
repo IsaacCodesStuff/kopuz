@@ -3,7 +3,7 @@ use components::dots_menu::{DotsMenu, MenuAction};
 use components::playlist_modal::PlaylistModal;
 use components::selection_bar::SelectionBar;
 use components::track_row::TrackRow;
-use config::{AppConfig, MusicService};
+use config::{AppConfig, MusicService, UiStyle};
 use dioxus::prelude::*;
 use reader::{Library, PlaylistStore};
 use server::jellyfin::JellyfinClient;
@@ -345,6 +345,8 @@ pub fn JellyfinAlbumDetails(
         }
     };
 
+    let is_modern = config.read().ui_style == UiStyle::Modern;
+
     rsx! {
         div {
             class: "w-full max-w-[1600px] mx-auto",
@@ -608,42 +610,54 @@ pub fn JellyfinAlbumDetails(
                 }
             }
 
-            div { class: "space-y-1",
+            div {
                 if album_tracks().is_empty() {
                     div { class: "py-12 flex flex-col items-center justify-center text-slate-600",
                         i { class: "fa-regular fa-folder-open text-4xl mb-4" }
                         p { class: "text-lg", "{i18n::t(\"no_songs_here\")}" }
                     }
                 } else {
-                    div { class: "grid grid-cols-[auto_1fr_1fr_auto_auto] gap-4 px-2 py-2 border-b border-white/5 text-sm font-medium text-slate-500 mb-2 uppercase tracking-wider",
-                        div { class: "flex items-center w-24 shrink-0",
-                            div { class: "mr-4 flex items-center justify-center w-6 h-6 shrink-0",
-                                button {
-                                    class: if !album_tracks().is_empty() && album_tracks().iter().all(|(track, _)| selected_tracks.read().contains(&track.path)) {
-                                        "w-4 h-4 rounded border border-indigo-400 bg-indigo-500 text-white flex items-center justify-center transition-colors"
-                                    } else {
-                                        "w-4 h-4 rounded border border-white/20 bg-white/5 hover:border-white/50 transition-colors"
-                                    },
-                                    aria_label: "Select all tracks",
-                                    onclick: move |_| {
-                                        let tracks = album_tracks();
-                                        let all_selected = !tracks.is_empty() && tracks.iter().all(|(track, _)| selected_tracks.read().contains(&track.path));
-                                        if all_selected {
-                                            selected_tracks.write().clear();
-                                            is_selection_mode.set(false);
+                    if is_modern {
+                        div {
+                            class: "grid px-3 py-2 text-[10px] font-bold uppercase tracking-widest border-b mb-1",
+                            style: "grid-template-columns: 40px 1fr 180px 56px 40px; color: rgba(255,255,255,0.25); border-color: rgba(255,255,255,0.06);",
+                            div {}
+                            div { "{i18n::t(\"title\")}" }
+                            div { "{i18n::t(\"artist\")}" }
+                            div { class: "text-right pr-2", i { class: "fa-regular fa-clock" } }
+                            div {}
+                        }
+                    } else {
+                        div { class: "grid grid-cols-[auto_1fr_1fr_auto_auto] gap-4 px-2 py-2 border-b border-white/5 text-sm font-medium text-slate-500 mb-2 uppercase tracking-wider",
+                            div { class: "flex items-center w-24 shrink-0",
+                                div { class: "mr-4 flex items-center justify-center w-6 h-6 shrink-0",
+                                    button {
+                                        class: if !album_tracks().is_empty() && album_tracks().iter().all(|(track, _)| selected_tracks.read().contains(&track.path)) {
+                                            "w-4 h-4 rounded border border-indigo-400 bg-indigo-500 text-white flex items-center justify-center transition-colors"
                                         } else {
-                                            selected_tracks.set(tracks.into_iter().map(|(track, _)| track.path).collect());
-                                            is_selection_mode.set(true);
+                                            "w-4 h-4 rounded border border-white/20 bg-white/5 hover:border-white/50 transition-colors"
+                                        },
+                                        aria_label: "Select all tracks",
+                                        onclick: move |_| {
+                                            let tracks = album_tracks();
+                                            let all_selected = !tracks.is_empty() && tracks.iter().all(|(track, _)| selected_tracks.read().contains(&track.path));
+                                            if all_selected {
+                                                selected_tracks.write().clear();
+                                                is_selection_mode.set(false);
+                                            } else {
+                                                selected_tracks.set(tracks.into_iter().map(|(track, _)| track.path).collect());
+                                                is_selection_mode.set(true);
+                                            }
+                                        },
+                                        if !album_tracks().is_empty() && album_tracks().iter().all(|(track, _)| selected_tracks.read().contains(&track.path)) {
+                                            i { class: "fa-solid fa-check", style: "font-size: 9px;" }
                                         }
-                                    },
-                                    if !album_tracks().is_empty() && album_tracks().iter().all(|(track, _)| selected_tracks.read().contains(&track.path)) {
-                                        i { class: "fa-solid fa-check", style: "font-size: 9px;" }
                                     }
                                 }
                             }
+                            div { "{i18n::t(\"title\")}" }
+                            div { "{i18n::t(\"album\")}" }
                         }
-                        div { "{i18n::t(\"title\")}" }
-                        div { "{i18n::t(\"album\")}" }
                     }
                     for (idx, (track, track_cover_url)) in album_tracks().into_iter().enumerate() {
                         {
@@ -674,6 +688,7 @@ pub fn JellyfinAlbumDetails(
                                     key: "{track_key}",
                                     track: track.clone(),
                                     cover_url: track_cover_url,
+                                    row_num: Some(idx + 1),
                                     is_menu_open,
                                     is_currently_playing: currently_playing_idx == Some(idx),
                                     is_selection_mode: is_selection_mode(),

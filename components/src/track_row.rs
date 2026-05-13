@@ -1,4 +1,5 @@
 use crate::dots_menu::{DotsMenu, MenuAction};
+use config::{AppConfig, UiStyle};
 use dioxus::prelude::*;
 use reader::models::Track;
 
@@ -35,7 +36,10 @@ pub fn TrackRow(
     #[props(default = false)] is_downloaded: bool,
     #[props(default = false)] is_downloading: bool,
     #[props(default = false)] is_currently_playing: bool,
+    #[props(default = None)] row_num: Option<usize>,
 ) -> Element {
+    let config = use_context::<Signal<AppConfig>>();
+    let is_modern = config.read().ui_style == UiStyle::Modern;
     let add_to_queue_text = i18n::t("add_to_queue").to_string();
     let add_to_playlist_text = i18n::t("add_to_playlist").to_string();
     let remove_from_playlist_text = i18n::t("remove_from_playlist").to_string();
@@ -126,6 +130,146 @@ pub fn TrackRow(
             task.cancel();
         }
     };
+
+    let fmt_dur = |s: u64| format!("{}:{:02}", s / 60, s % 60);
+    let duration_str = fmt_dur(track.duration);
+
+    if is_modern {
+        return rsx! {
+            div {
+                class: "grid px-2 py-1.5 rounded-lg mx-1 group cursor-default transition-colors hover:bg-white/5 select-none",
+                style: if is_currently_playing {
+                    "grid-template-columns: 40px 1fr 180px 56px 40px; background: color-mix(in oklab, var(--color-indigo-500) 12%, transparent);"
+                } else if is_selected {
+                    "grid-template-columns: 40px 1fr 180px 56px 40px; background: rgba(255,255,255,0.07);"
+                } else {
+                    "grid-template-columns: 40px 1fr 180px 56px 40px;"
+                },
+                ondoubleclick: move |_| { if !is_selection_mode { on_play.call(()); } },
+                oncontextmenu: move |evt| {
+                    evt.prevent_default();
+                    if !is_selection_mode { on_click_menu.call(()); }
+                },
+
+                div { class: "flex items-center",
+                    if is_currently_playing {
+                        i {
+                            class: "fa-solid fa-volume-high text-xs",
+                            style: "color: var(--color-indigo-500);"
+                        }
+                    } else if on_select.is_some() && is_selection_mode {
+                        button {
+                            class: if is_selected {
+                                "w-4 h-4 rounded border border-indigo-400 bg-indigo-500 text-white flex items-center justify-center transition-colors"
+                            } else {
+                                "w-4 h-4 rounded border border-white/20 bg-white/5 hover:border-white/50 transition-colors"
+                            },
+                            onclick: move |evt| {
+                                evt.stop_propagation();
+                                handle_select_click(is_selected, is_selection_mode, on_select);
+                            },
+                            if is_selected { i { class: "fa-solid fa-check", style: "font-size: 9px;" } }
+                        }
+                    } else {
+                        if let Some(n) = row_num {
+                            span {
+                                class: "text-xs group-hover:hidden",
+                                style: "color: rgba(255,255,255,0.25);",
+                                "{n}"
+                            }
+                        }
+                        button {
+                            class: if row_num.is_some() {
+                                "hidden group-hover:flex items-center justify-center"
+                            } else {
+                                "flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                            },
+                            onclick: move |_| on_play.call(()),
+                            i { class: "fa-solid fa-play text-xs", style: "color: rgba(255,255,255,0.8);" }
+                        }
+                    }
+                }
+
+                div { class: "flex items-center min-w-0 pr-3 gap-2",
+                    div { class: "w-8 h-8 rounded bg-white/5 overflow-hidden shrink-0 flex items-center justify-center",
+                        if let Some(ref url) = cover_url {
+                            img {
+                                src: "{url.as_ref()}",
+                                class: "w-full h-full object-cover",
+                                loading: "lazy",
+                                decoding: "async",
+                            }
+                        } else {
+                            i { class: "fa-solid fa-music text-white/20", style: "font-size: 10px;" }
+                        }
+                    }
+                    span {
+                        class: "text-sm font-medium truncate",
+                        style: if is_currently_playing {
+                            "color: var(--color-indigo-500); font-weight: 600;"
+                        } else {
+                            "color: rgba(255,255,255,0.9);"
+                        },
+                        "{track.title}"
+                    }
+                    if is_downloaded {
+                        i {
+                            class: "fa-solid fa-arrow-down-to-line text-[9px] shrink-0",
+                            style: "color: var(--color-indigo-500); opacity: 0.7;"
+                        }
+                    }
+                }
+
+                div { class: "flex items-center min-w-0 pr-3",
+                    span {
+                        class: "text-sm truncate",
+                        style: "color: rgba(255,255,255,0.45);",
+                        "{track.artist}"
+                    }
+                }
+
+                div { class: "flex items-center justify-end pr-2",
+                    span {
+                        class: "text-xs font-mono",
+                        style: "color: rgba(255,255,255,0.3);",
+                        "{duration_str}"
+                    }
+                }
+
+                div { class: "flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity",
+                    if !is_selection_mode {
+                        DotsMenu {
+                            actions,
+                            is_open: is_menu_open,
+                            on_open: move |_| on_click_menu.call(()),
+                            on_close: move |_| on_close_menu.call(()),
+                            button_class: "w-6 h-6 flex items-center justify-center rounded transition-colors hover:bg-white/10".to_string(),
+                            anchor: "right".to_string(),
+                            on_action: move |idx: usize| {
+                                if let Some(queue_idx) = add_to_queue_idx {
+                                    if idx == queue_idx {
+                                        if let Some(handler) = on_queue { handler.call(()); }
+                                        return;
+                                    }
+                                }
+                                if idx == add_to_playlist_idx {
+                                    on_add_to_playlist.call(());
+                                } else if let Some(remove_idx) = remove_action_idx {
+                                    if idx == remove_idx {
+                                        if let Some(handler) = on_remove_from_playlist { handler.call(()); }
+                                    }
+                                } else if has_download && idx == download_action_idx {
+                                    if let Some(handler) = on_download { handler.call(()); }
+                                } else if idx == delete_action_idx {
+                                    on_delete.call(());
+                                }
+                            },
+                        }
+                    }
+                }
+            }
+        };
+    }
 
     rsx! {
         div {
