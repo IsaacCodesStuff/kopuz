@@ -60,11 +60,45 @@ fn get_color_label(key: &str) -> String {
     }
 }
 
+fn normalize_hex_color(value: &str) -> Option<String> {
+    let sanitized = sanitize_hex_input(value);
+    let hex = sanitized.strip_prefix('#').unwrap_or(&sanitized);
+
+    match hex.len() {
+        3 => {
+            let expanded = hex
+                .chars()
+                .flat_map(|c| [c, c])
+                .collect::<String>()
+                .to_lowercase();
+            Some(format!("#{expanded}"))
+        }
+        6 => Some(format!("#{}", hex.to_lowercase())),
+        _ => None,
+    }
+}
+
+fn sanitize_hex_input(value: &str) -> String {
+    let trimmed = value.trim();
+    let hex: String = trimmed
+        .chars()
+        .filter(|c| c.is_ascii_hexdigit())
+        .take(6)
+        .collect();
+
+    if trimmed.starts_with('#') {
+        format!("#{hex}")
+    } else {
+        hex
+    }
+}
+
 #[component]
 pub fn ThemeEditorPage(config: Signal<AppConfig>, #[props(default)] embedded: bool) -> Element {
     let mut selected_id: Signal<Option<String>> = use_signal(|| None);
     let mut editing_name = use_signal(String::new);
     let mut editing_vars: Signal<HashMap<String, String>> = use_signal(default_vars_map);
+    let mut editing_hex_inputs: Signal<HashMap<String, String>> = use_signal(default_vars_map);
 
     use_effect(move || {
         let id = selected_id.read().clone();
@@ -74,11 +108,13 @@ pub fn ThemeEditorPage(config: Signal<AppConfig>, #[props(default)] embedded: bo
                 if let Some(ct) = cfg.custom_themes.get(id) {
                     editing_name.set(ct.name.clone());
                     editing_vars.set(ct.vars.clone());
+                    editing_hex_inputs.set(ct.vars.clone());
                 }
             }
             None => {
                 editing_name.set(String::new());
                 editing_vars.set(default_vars_map());
+                editing_hex_inputs.set(default_vars_map());
             }
         }
     });
@@ -167,21 +203,73 @@ pub fn ThemeEditorPage(config: Signal<AppConfig>, #[props(default)] embedded: bo
                                     .get(&key_str)
                                     .cloned()
                                     .unwrap_or_else(|| "#000000".to_string());
+                                let input_value = editing_hex_inputs
+                                    .read()
+                                    .get(&key_str)
+                                    .cloned()
+                                    .unwrap_or_else(|| current.clone());
+                                let picker_value = normalize_hex_color(&current)
+                                    .unwrap_or_else(|| "#000000".to_string());
                                 let label = get_color_label(key);
+                                let color_input_label = format!("{label} color");
+                                let hex_input_label = format!("{label} hex");
+                                let picker_key = key_str.clone();
+                                let text_key = key_str.clone();
+                                let blur_key = key_str.clone();
                                 rsx! {
-                                    div { class: "flex items-center justify-between",
+                                    div { class: "flex items-center justify-between gap-4",
                                         span { class: "text-sm text-slate-300", "{label}" }
-                                        div { class: "flex items-center gap-2",
+                                        div { class: "flex items-center gap-2 shrink-0",
                                             input {
                                                 r#type: "color",
-                                                class: "w-8 h-8 rounded cursor-pointer border border-white/10 bg-transparent",
-                                                value: "{current}",
+                                                class: "w-8 h-8 shrink-0 rounded cursor-pointer border border-white/10 bg-transparent",
+                                                value: "{picker_value}",
+                                                aria_label: color_input_label,
                                                 oninput: move |e| {
-                                                    editing_vars.write().insert(key_str.clone(), e.value());
+                                                    let value = e.value();
+                                                    editing_vars.write().insert(picker_key.clone(), value.clone());
+                                                    editing_hex_inputs.write().insert(picker_key.clone(), value);
                                                 }
                                             }
-                                            span { class: "text-xs text-slate-500 font-mono w-[4.5rem]",
-                                                "{current}"
+                                            input {
+                                                r#type: "text",
+                                                class: "w-24 shrink-0 bg-black/20 border border-white/10 rounded px-2 py-1 text-xs text-slate-300 font-mono uppercase focus:outline-none focus:border-white/30",
+                                                value: "{input_value}",
+                                                aria_label: hex_input_label,
+                                                maxlength: 7,
+                                                placeholder: "#000000",
+                                                oninput: move |e| {
+                                                    let value = sanitize_hex_input(&e.value());
+                                                    let current_input = editing_hex_inputs
+                                                        .read()
+                                                        .get(&text_key)
+                                                        .cloned()
+                                                        .unwrap_or_default();
+
+                                                    if current_input != value {
+                                                        editing_hex_inputs.write().insert(text_key.clone(), value.clone());
+                                                    }
+
+                                                    if let Some(color) = normalize_hex_color(&value) {
+                                                        let current_color = editing_vars
+                                                            .read()
+                                                            .get(&text_key)
+                                                            .cloned()
+                                                            .unwrap_or_default();
+
+                                                        if current_color != color {
+                                                            editing_vars.write().insert(text_key.clone(), color);
+                                                        }
+                                                    }
+                                                },
+                                                onblur: move |_| {
+                                                    let current = editing_vars
+                                                        .read()
+                                                        .get(&blur_key)
+                                                        .cloned()
+                                                        .unwrap_or_else(|| "#000000".to_string());
+                                                    editing_hex_inputs.write().insert(blur_key.clone(), current);
+                                                }
                                             }
                                         }
                                     }
