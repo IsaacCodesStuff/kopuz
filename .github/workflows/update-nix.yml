@@ -39,31 +39,51 @@ jobs:
         run: |
           sed -i 's/version = "[^"]*";/version = "${{ steps.ver.outputs.version }}";/' nix/package.nix
 
+      - name: Reset hashes to fake
+        run: |
+          FAKE='sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA='
+          sed -i "0,/hash = \"sha256-[^\"]*\";/{s|hash = \"sha256-[^\"]*\";|hash = \"$FAKE\";|}" nix/package.nix
+          sed -i "s|cargoHash = \"sha256-[^\"]*\";|cargoHash = \"$FAKE\";|" nix/package.nix
+
       - name: Compute src hash
         run: |
-          PREFETCH=$(nix run nixpkgs#nix-prefetch-github -- temidaradev kopuz --rev "v${{ steps.ver.outputs.version }}")
-          NEW_HASH=$(echo "$PREFETCH" | nix run nixpkgs#jq -- -r .hash)
-          if [ -z "$NEW_HASH" ] || [ "$NEW_HASH" = "null" ]; then
-            echo "Failed to compute src hash"; echo "$PREFETCH"; exit 1
+          set +e
+          BUILD_OUT=$(nix build --no-link --print-build-logs --impure --expr '
+            with import <nixpkgs> {};
+            callPackage ./nix/package.nix {}
+          ' -I nixpkgs=channel:nixos-unstable 2>&1)
+          set -e
+          echo "$BUILD_OUT" | tail -40
+          GOT=$(echo "$BUILD_OUT" | grep -oE 'got:[[:space:]]+sha256-[A-Za-z0-9+/=]+' | head -1 | awk '{print $2}')
+          if [ -z "$GOT" ]; then
+            GOT=$(echo "$BUILD_OUT" | grep -oE 'use[[:space:]]+"sha256-[A-Za-z0-9+/=]+"' | head -1 | sed -E 's/.*"(sha256-[^"]+)".*/\1/')
           fi
-          ESCAPED=$(printf '%s\n' "$NEW_HASH" | sed -e 's/[\/&]/\\&/g')
+          if [ -z "$GOT" ]; then
+            echo "Failed to extract src hash"
+            exit 1
+          fi
+          echo "src hash: $GOT"
+          ESCAPED=$(printf '%s\n' "$GOT" | sed -e 's/[\/&]/\\&/g')
           sed -i "0,/hash = \"sha256-[^\"]*\";/{s|hash = \"sha256-[^\"]*\";|hash = \"$ESCAPED\";|}" nix/package.nix
 
       - name: Compute cargoHash
         run: |
-          sed -i 's|cargoHash = "sha256-[^"]*";|cargoHash = "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";|' nix/package.nix
           set +e
-          BUILD_OUT=$(nix build --no-link --print-build-logs -E '
+          BUILD_OUT=$(nix build --no-link --print-build-logs --impure --expr '
             with import <nixpkgs> {};
             callPackage ./nix/package.nix {}
-          ' 2>&1)
+          ' -I nixpkgs=channel:nixos-unstable 2>&1)
           set -e
           echo "$BUILD_OUT" | tail -60
           GOT=$(echo "$BUILD_OUT" | grep -oE 'got:[[:space:]]+sha256-[A-Za-z0-9+/=]+' | head -1 | awk '{print $2}')
           if [ -z "$GOT" ]; then
-            echo "Failed to extract cargoHash from build output"
+            GOT=$(echo "$BUILD_OUT" | grep -oE 'use[[:space:]]+"sha256-[A-Za-z0-9+/=]+"' | head -1 | sed -E 's/.*"(sha256-[^"]+)".*/\1/')
+          fi
+          if [ -z "$GOT" ]; then
+            echo "Failed to extract cargoHash"
             exit 1
           fi
+          echo "cargoHash: $GOT"
           ESCAPED=$(printf '%s\n' "$GOT" | sed -e 's/[\/&]/\\&/g')
           sed -i "s|cargoHash = \"sha256-[^\"]*\";|cargoHash = \"$ESCAPED\";|" nix/package.nix
 
