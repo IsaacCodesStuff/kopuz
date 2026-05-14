@@ -313,3 +313,25 @@ channel_mode_swap_left_right = 󱤴 󱥭
 
 crossfade = 󱥭 󱤴
 crossfade_off = 󱤄
+
+continue_listening = Continue Listening
+made_for_you = Made For You
+recently_added = Recently Added
+customize_home = Customize Home
+done_editing = Done
+reset_home = Reset
+hide_section = Hide
+show_section = Show
+move_up = Move up
+move_down = Move down
+home_section_hero = Hero
+home_section_continue_listening = Continue Listening
+home_section_listen_now = Listen Now
+home_section_top_artists = Top Artists
+home_section_new_releases = New Releases
+home_section_made_for_you = Made For You
+home_section_recently_added = Recently Added
+home_section_playlists = Playlists
+layout_cards = Cards
+layout_list = List
+listen_now_layout = Layout
