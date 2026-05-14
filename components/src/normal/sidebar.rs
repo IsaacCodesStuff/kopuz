@@ -100,7 +100,8 @@ pub fn SidebarNormal(props: SidebarProps) -> Element {
         items
     };
 
-    let item_count = ordered_items.len();
+    let _item_count = ordered_items.len();
+    let order_len = config.read().sidebar_order.len();
 
     rsx! {
         if *is_resizing.read() {
@@ -168,8 +169,8 @@ pub fn SidebarNormal(props: SidebarProps) -> Element {
                             collapsed: is_collapsed,
                             active: *props.current_route.read() == item.route,
                             is_rtl,
-                            can_move_up: idx > 0,
-                            can_move_down: idx < item_count - 1,
+                            can_move_up: idx > 0 && idx < order_len,
+                            can_move_down: idx + 1 < order_len,
                             onclick: move |_| props.on_navigate.call(item.route),
                             on_move_up: move |_| {
                                 let mut order = config.peek().sidebar_order.clone();

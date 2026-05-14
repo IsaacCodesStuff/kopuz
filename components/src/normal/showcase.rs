@@ -159,7 +159,7 @@ pub fn ShowcaseNormal(props: ShowcaseProps) -> Element {
                                }
                            }
                            div { "{i18n::t(\"title\")}" }
-                           div { "{i18n::t(\"album\")}" }
+                           div { "{i18n::t(\"artist\")}" }
                       }
 
                      for (idx, track) in props.tracks.iter().enumerate() {
@@ -201,22 +201,13 @@ pub fn ShowcaseNormal(props: ShowcaseProps) -> Element {
                              let can_move_up = props.is_reorderable && idx > 0;
                              let can_move_down = props.is_reorderable && idx + 1 < track_count;
 
-                             let item_id: Option<String> = {
-                                 let s = track.path.to_string_lossy();
-                                 if s.starts_with("jellyfin:") {
-                                     s.split(':').nth(1).map(|id| id.to_string())
-                                 } else {
-                                     None
-                                 }
+                             let path_str = track.path.to_string_lossy();
+                             let item_id_str: String = path_str.split(':').nth(1).unwrap_or(&path_str).to_string();
+                             let is_downloaded = if let Some(path_str) = offline_tracks.get(&item_id_str) {
+                                 std::path::Path::new(path_str).exists()
+                             } else {
+                                 false
                              };
-                             let is_downloaded = item_id.as_ref()
-                                 .map_or(false, |id| {
-                                     if let Some(path_str) = offline_tracks.get(id) {
-                                         std::path::Path::new(path_str).exists()
-                                     } else {
-                                         false
-                                     }
-                                 });
                              let is_downloading = false;
 
                              rsx! {

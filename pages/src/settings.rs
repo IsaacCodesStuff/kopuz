@@ -245,7 +245,7 @@ pub fn Settings(config: Signal<AppConfig>) -> Element {
                             }
                         }
                         SettingItem {
-                            title: "UI style".to_string(),
+                            title: i18n::t("ui_style").to_string(),
                             control: rsx! {
                                 {
                                     let current_style = config.read().ui_style;
@@ -261,12 +261,12 @@ pub fn Settings(config: Signal<AppConfig>) -> Element {
                                             option {
                                                 value: "normal",
                                                 selected: current_style == config::UiStyle::Normal,
-                                                "Normal"
+                                                "{i18n::t(\"ui_normal\")}"
                                             }
                                             option {
                                                 value: "modern",
                                                 selected: current_style == config::UiStyle::Modern,
-                                                "Vaxry"
+                                                "{i18n::t(\"ui_modern\")}"
                                             }
                                         }
                                     }
@@ -274,7 +274,7 @@ pub fn Settings(config: Signal<AppConfig>) -> Element {
                             }
                         }
                         SettingItem {
-                            title: "Player bar position".to_string(),
+                            title: i18n::t("player_bar_position").to_string(),
                             control: rsx! {
                                 {
                                     let current_position = config.read().player_bar_position;
@@ -290,12 +290,12 @@ pub fn Settings(config: Signal<AppConfig>) -> Element {
                                             option {
                                                 value: "bottom",
                                                 selected: current_position == config::PlayerBarPosition::Bottom,
-                                                "Bottom"
+                                                "{i18n::t(\"position_bottom\")}"
                                             }
                                             option {
                                                 value: "top",
                                                 selected: current_position == config::PlayerBarPosition::Top,
-                                                "Top"
+                                                "{i18n::t(\"position_top\")}"
                                             }
                                         }
                                     }

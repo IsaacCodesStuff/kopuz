@@ -676,19 +676,22 @@ impl Default for AppConfig {
 
 impl AppConfig {
     pub fn migrate_home_sections(&mut self) {
-        let existing: std::collections::HashSet<String> =
-            self.home_sections.iter().map(|s| s.key.clone()).collect();
+        let allowed: std::collections::HashSet<&&str> = HOME_SECTION_KEYS.iter().collect();
+        let mut seen: std::collections::HashSet<String> = std::collections::HashSet::new();
+        let existing = std::mem::take(&mut self.home_sections);
+        for s in existing {
+            if allowed.contains(&s.key.as_str()) && seen.insert(s.key.clone()) {
+                self.home_sections.push(s);
+            }
+        }
         for key in HOME_SECTION_KEYS {
-            if !existing.contains(*key) {
+            if !seen.contains(*key) {
                 self.home_sections.push(HomeSection {
                     key: (*key).to_string(),
                     enabled: true,
                 });
             }
         }
-        let allowed: std::collections::HashSet<&&str> = HOME_SECTION_KEYS.iter().collect();
-        self.home_sections
-            .retain(|s| allowed.contains(&s.key.as_str()));
     }
 
     pub fn push_recent(&mut self, id: String, server: bool) {

@@ -1160,7 +1160,10 @@ fn render_playlists(
                             let lib = library.peek();
                             lib.jellyfin_tracks
                                 .iter()
-                                .find(|t| t.path.to_string_lossy().contains(&tid))
+                                .find(|t| {
+                                    let s = t.path.to_string_lossy();
+                                    s.split(':').nth(1).map(|id| id == tid).unwrap_or(false)
+                                })
                                 .and_then(|t| {
                                     let conf = config.peek();
                                     if let Some(server) = &conf.server {

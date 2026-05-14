@@ -102,6 +102,9 @@ pub fn toggle_favorite(
                             eprintln!("Failed to sync favorite to server: {e}");
                             favorites_store.write().set_jellyfin(item_id, !new_fav);
                         }
+                    } else {
+                        eprintln!("No server credentials, reverting favorite change");
+                        favorites_store.write().set_jellyfin(item_id, !new_fav);
                     }
                 });
             }

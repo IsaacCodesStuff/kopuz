@@ -154,8 +154,9 @@ pub fn ShowcaseModern(props: ShowcaseProps) -> Element {
                             if path_str.starts_with("jellyfin:") {
                                 let conf = config.read();
                                 conf.server.as_ref().and_then(|s| {
-                                    utils::jellyfin_image::jellyfin_image_url_from_path(
+                                    utils::jellyfin_image::track_cover_url_with_album_fallback(
                                         &path_str,
+                                        &track.album_id,
                                         &s.url,
                                         s.access_token.as_deref(),
                                         64,

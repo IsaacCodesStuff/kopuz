@@ -228,7 +228,7 @@ pub fn use_player_task(ctrl: PlayerController) {
 
                 let is_playing = *ctrl.is_playing.read();
 
-                {
+                if is_playing {
                     let current_path: Option<String> = {
                         let q = ctrl.queue.read();
                         let idx = *ctrl.current_queue_index.read();

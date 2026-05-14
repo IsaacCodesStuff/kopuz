@@ -145,7 +145,22 @@ pub fn TrackRow(
                 } else {
                     "grid-template-columns: 40px 1fr 180px 56px 40px;"
                 },
+                onclick: move |evt| {
+                    evt.stop_propagation();
+                    if *long_press_occurred.read() {
+                        long_press_occurred.set(false);
+                        return;
+                    }
+                    if is_selection_mode {
+                        handle_select_click(is_selected, is_selection_mode, on_select);
+                    }
+                },
                 ondoubleclick: move |_| { if !is_selection_mode { on_play.call(()); } },
+                onmousedown: move |_| start_long_press(),
+                onmouseup: move |_| cancel_long_press(),
+                onmouseleave: move |_| cancel_long_press(),
+                ontouchstart: move |_| start_long_press(),
+                ontouchend: move |_| cancel_long_press(),
                 oncontextmenu: move |evt| {
                     evt.prevent_default();
                     if !is_selection_mode { on_click_menu.call(()); }
@@ -191,16 +206,13 @@ pub fn TrackRow(
                 }
 
                 div { class: "flex items-center min-w-0 pr-3 gap-2",
-                    div { class: "w-8 h-8 rounded bg-white/5 overflow-hidden shrink-0 flex items-center justify-center",
+                    div { class: "w-8 h-8 rounded bg-white/5 overflow-hidden shrink-0 flex items-center justify-center relative",
+                        i { class: "fa-solid fa-music text-white/20 absolute", style: "font-size: 10px;" }
                         if let Some(ref url) = cover_url {
-                            img {
-                                src: "{url.as_ref()}",
-                                class: "w-full h-full object-cover",
-                                loading: "lazy",
-                                decoding: "async",
+                            div {
+                                class: "absolute inset-0 bg-cover bg-center",
+                                style: "background-image: url('{url.as_ref()}');"
                             }
-                        } else {
-                            i { class: "fa-solid fa-music text-white/20", style: "font-size: 10px;" }
                         }
                     }
                     span {
@@ -254,10 +266,8 @@ pub fn TrackRow(
                                 }
                                 if idx == add_to_playlist_idx {
                                     on_add_to_playlist.call(());
-                                } else if let Some(remove_idx) = remove_action_idx {
-                                    if idx == remove_idx {
-                                        if let Some(handler) = on_remove_from_playlist { handler.call(()); }
-                                    }
+                                } else if remove_action_idx == Some(idx) {
+                                    if let Some(handler) = on_remove_from_playlist { handler.call(()); }
                                 } else if has_download && idx == download_action_idx {
                                     if let Some(handler) = on_download { handler.call(()); }
                                 } else if idx == delete_action_idx {
@@ -329,15 +339,12 @@ pub fn TrackRow(
             }
 
             div { class: "relative w-10 h-10 bg-white/5 rounded overflow-hidden flex items-center justify-center mr-4 shrink-0",
+                i { class: "fa-solid fa-music text-white/20 absolute" }
                 if let Some(url) = cover_url {
-                    img {
-                        src: "{url.as_ref()}",
-                        class: "w-full h-full object-cover",
-                        loading: "lazy",
-                        decoding: "async",
+                    div {
+                        class: "absolute inset-0 bg-cover bg-center",
+                        style: "background-image: url('{url.as_ref()}');"
                     }
-                } else {
-                    i { class: "fa-solid fa-music text-white/20" }
                 }
                 if is_downloaded && !is_currently_playing {
                     div { class: "absolute bottom-0 right-0 w-3 h-3 bg-indigo-500 rounded-tl flex items-center justify-center",
@@ -379,11 +386,9 @@ pub fn TrackRow(
 
                         if idx == add_to_playlist_idx {
                             on_add_to_playlist.call(());
-                        } else if let Some(remove_idx) = remove_action_idx {
-                            if idx == remove_idx {
-                                if let Some(handler) = on_remove_from_playlist {
-                                    handler.call(());
-                                }
+                        } else if remove_action_idx == Some(idx) {
+                            if let Some(handler) = on_remove_from_playlist {
+                                handler.call(());
                             }
                         } else if has_download && idx == download_action_idx {
                             if let Some(handler) = on_download {
