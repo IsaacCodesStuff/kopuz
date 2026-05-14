@@ -456,6 +456,10 @@ fn default_recently_played_limit() -> usize {
     50
 }
 
+fn default_hero_height() -> u32 {
+    300
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AppConfig {
     #[serde(default)]
@@ -518,6 +522,8 @@ pub struct AppConfig {
     pub player_bar_position: PlayerBarPosition,
     #[serde(default)]
     pub ui_style: UiStyle,
+    #[serde(default = "default_hero_height")]
+    pub hero_height: u32,
     #[serde(default = "default_home_sections")]
     pub home_sections: Vec<HomeSection>,
     #[serde(default)]
@@ -659,6 +665,7 @@ impl Default for AppConfig {
             offline_tracks: HashMap::new(),
             player_bar_position: PlayerBarPosition::Bottom,
             ui_style: UiStyle::Normal,
+            hero_height: default_hero_height(),
             home_sections: default_home_sections(),
             recently_played: Vec::new(),
             recently_played_server: Vec::new(),

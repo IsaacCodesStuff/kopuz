@@ -476,6 +476,7 @@ pub fn JellyfinHome(
                                     library,
                                     favorites_store,
                                     config,
+                                    edit,
                                     is_modern,
                                     listen_now_style,
                                     jellyfin_shuffled(),
@@ -507,6 +508,7 @@ fn render_server_section(
     library: Signal<Library>,
     favorites_store: Signal<FavoritesStore>,
     config: Signal<AppConfig>,
+    edit: bool,
     is_modern: bool,
     listen_now_style: ListenNowStyle,
     jellyfin_shuffled: Vec<AlbumCard>,
@@ -524,15 +526,18 @@ fn render_server_section(
     scroll_container: impl Fn(&str, i32) + Copy + 'static,
 ) -> Element {
     match key {
-        "hero" => render_hero(
-            library,
-            favorites_store,
-            config,
-            is_modern,
-            jellyfin_shuffled,
-            hero_cover,
-            on_play_album,
-        ),
+        "hero" => rsx! {
+            ServerHeroBanner {
+                library,
+                favorites_store,
+                config,
+                edit,
+                is_modern,
+                album: jellyfin_shuffled.first().cloned(),
+                hero_cover,
+                on_play_album,
+            }
+        },
         "continue_listening" => render_continue_listening(
             is_modern,
             continue_listening,
@@ -598,18 +603,64 @@ fn render_server_section(
     }
 }
 
-fn render_hero(
+#[component]
+fn ServerHeroBanner(
     library: Signal<Library>,
     favorites_store: Signal<FavoritesStore>,
-    config: Signal<AppConfig>,
+    mut config: Signal<AppConfig>,
+    edit: bool,
     is_modern: bool,
-    jellyfin_shuffled: Vec<AlbumCard>,
+    album: Option<AlbumCard>,
     hero_cover: Option<String>,
     on_play_album: EventHandler<String>,
 ) -> Element {
+    let mut is_resizing = use_signal(|| false);
+    let mut start_y = use_signal(|| 0.0_f64);
+    let mut start_h = use_signal(|| 0_u32);
+
+    use_effect(move || {
+        if *is_resizing.read() {
+            let sy = *start_y.peek();
+            let sh = *start_h.peek();
+            spawn(async move {
+                let mut eval = dioxus::document::eval(
+                    r#"
+                    const handleMouseMove = (e) => { dioxus.send(e.clientY); };
+                    const handleMouseUp = () => {
+                        dioxus.send("stop");
+                        window.removeEventListener('mousemove', handleMouseMove);
+                        window.removeEventListener('mouseup', handleMouseUp);
+                    };
+                    window.addEventListener('mousemove', handleMouseMove);
+                    window.addEventListener('mouseup', handleMouseUp);
+                    "#,
+                );
+
+                while let Ok(val) = eval.recv::<serde_json::Value>().await {
+                    if let Some(y) = val.as_f64() {
+                        let delta = y - sy;
+                        let new_h = ((sh as f64) + delta).clamp(140.0, 800.0) as u32;
+                        config.write().hero_height = new_h;
+                    } else if val.as_str() == Some("stop") {
+                        is_resizing.set(false);
+                        break;
+                    }
+                }
+            });
+        }
+    });
+
+    let hero_height = config.read().hero_height;
+    let section_class = if is_modern {
+        "relative rounded-xl overflow-hidden mb-10"
+    } else {
+        "relative rounded-3xl overflow-hidden mb-12"
+    };
+    let section_style = format!("height: {hero_height}px;");
+
     rsx! {
-        section { class: if is_modern { "relative h-[300px] rounded-xl overflow-hidden mb-10" } else { "relative h-[350px] rounded-3xl overflow-hidden mb-12" },
-            if let Some((album_id, title, artist, _)) = jellyfin_shuffled.first().cloned() {
+        section { class: "{section_class}", style: "{section_style}",
+            if let Some((album_id, title, artist, _)) = album {
                 div { class: "absolute inset-0",
                     if let Some(url) = hero_cover {
                         img { src: "{url}", class: "w-full h-full object-cover", decoding: "async" }
@@ -729,6 +780,20 @@ fn render_hero(
                             }
                         }
                     }
+                }
+            }
+
+            if edit {
+                div {
+                    class: "absolute bottom-0 left-0 right-0 h-3 cursor-ns-resize flex items-center justify-center bg-black/40 hover:bg-indigo-500/40 transition-colors z-10",
+                    title: "Drag to resize",
+                    onmousedown: move |evt| {
+                        evt.stop_propagation();
+                        start_y.set(evt.client_coordinates().y);
+                        start_h.set(config.peek().hero_height);
+                        is_resizing.set(true);
+                    },
+                    div { class: "w-10 h-1 rounded-full bg-white/60" }
                 }
             }
         }
