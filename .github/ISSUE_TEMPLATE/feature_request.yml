@@ -1,0 +1,56 @@
+name: Feature request
+description: Suggest an improvement or a new capability for Kopuz
+title: "[Feature]: "
+labels:
+  - enhancement
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Describe the problem first, then the feature you want. Requests tied to a real workflow are easier to evaluate.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem are you trying to solve?
+      description: Explain the pain point or missing workflow.
+      placeholder: I want to..., but currently...
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: Describe the feature or behavior you want to see.
+      placeholder: Add a setting / view / shortcut that...
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Any workaround, competing app behavior, or alternative approach you considered.
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Playback / audio
+        - Local library
+        - Server integration
+        - UI / UX
+        - Downloads / yt-dlp
+        - Mobile / touch
+        - Packaging / install
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: extra
+    attributes:
+      label: Additional context
+      description: Add any constraints, edge cases, or implementation notes you think matter.

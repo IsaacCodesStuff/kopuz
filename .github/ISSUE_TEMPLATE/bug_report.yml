@@ -1,0 +1,88 @@
+name: Bug report
+description: Report a reproducible problem in Kopuz
+title: "[Bug]: "
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Fill this out with enough detail to reproduce the issue. Reports with logs, screenshots, and exact steps are much easier to fix.
+
+  - type: textarea
+    id: summary
+    attributes:
+      label: What happened?
+      description: Describe the bug and what you expected instead.
+      placeholder: When I..., Kopuz...
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: List the exact steps needed to trigger the issue.
+      placeholder: |
+        1. Open...
+        2. Click...
+        3. Play...
+        4. See error...
+    validations:
+      required: true
+
+  - type: dropdown
+    id: source
+    attributes:
+      label: Music source
+      options:
+        - Local library
+        - Jellyfin
+        - Subsonic / Navidrome
+        - Multiple / mixed
+        - Other
+        - Not sure
+    validations:
+      required: true
+
+  - type: dropdown
+    id: platform
+    attributes:
+      label: Platform
+      options:
+        - Linux desktop
+        - Windows desktop
+        - macOS desktop
+        - Browser / web
+        - Flatpak
+        - Other
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Kopuz version
+      description: App version, commit hash, or "latest git".
+      placeholder: v0.x.y or latest git
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs or console output
+      description: Paste any relevant terminal logs, panic output, or browser console errors.
+      render: shell
+
+  - type: textarea
+    id: media
+    attributes:
+      label: Screenshots or recordings
+      description: Drag and drop images or videos here if they help explain the issue.
+
+  - type: textarea
+    id: extra
+    attributes:
+      label: Additional context
+      description: Include related settings, file formats, network details, or anything else relevant.

@@ -1,0 +1,80 @@
+name: Performance issue
+description: Report lag, freezing, high CPU/RAM, or poor scrolling/performance
+title: "[Performance]: "
+labels:
+  - performance
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Performance reports are most useful when they identify the page, action, library size, and platform involved.
+
+  - type: textarea
+    id: issue
+    attributes:
+      label: What feels slow?
+      description: Describe the lag, freeze, stutter, memory growth, or high CPU usage.
+      placeholder: Scrolling the local library freezes for 1-2 seconds when...
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Open...
+        2. Scroll / search / play...
+        3. Notice lag...
+    validations:
+      required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Where does it happen?
+      options:
+        - Local library
+        - Local search
+        - Local artist / album page
+        - Server library
+        - Now playing / fullscreen
+        - Downloads / yt-dlp
+        - App startup
+        - Other
+    validations:
+      required: true
+
+  - type: dropdown
+    id: platform
+    attributes:
+      label: Platform
+      options:
+        - Linux desktop
+        - Windows desktop
+        - macOS desktop
+        - Browser / web
+        - Flatpak
+        - Other
+    validations:
+      required: true
+
+  - type: input
+    id: library_size
+    attributes:
+      label: Library size
+      description: Approximate track / album count if relevant.
+      placeholder: 12,000 tracks / 900 albums
+
+  - type: textarea
+    id: diagnostics
+    attributes:
+      label: Logs, profiler notes, or screenshots
+      description: Include terminal output, task manager screenshots, or profiler traces if available.
+      render: shell
+
+  - type: textarea
+    id: extra
+    attributes:
+      label: Additional context
+      description: Mention image sizes, remote server details, or anything else relevant.
