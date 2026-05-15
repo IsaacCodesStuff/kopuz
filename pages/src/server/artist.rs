@@ -2,7 +2,7 @@ use crate::server::download_manager::{DownloadQueue, queue_downloads};
 use components::dots_menu::{DotsMenu, MenuAction};
 use components::playlist_modal::PlaylistModal;
 use components::selection_bar::SelectionBar;
-use config::{AppConfig, ArtistViewOrder, MusicService};
+use config::{AppConfig, ArtistPhotoSource, ArtistViewOrder, MusicService};
 use dioxus::prelude::*;
 use reader::{Library, PlaylistStore};
 use server::jellyfin::JellyfinClient;
@@ -42,17 +42,107 @@ pub fn JellyfinArtist(
     let mut show_album_playlist_modal = use_signal(|| false);
     let mut pending_album_id_for_playlist = use_signal(|| None::<String>);
 
+    let mut fetched_artist_images =
+        use_context::<Signal<std::collections::HashMap<String, String>>>();
+    let mut is_fetching_images = use_context::<Signal<bool>>();
+
+    use_effect(move || {
+        let use_artist_photo = config.read().artist_photo_source == ArtistPhotoSource::ArtistPhoto;
+        if !use_artist_photo {
+            return;
+        }
+        if *is_fetching_images.read() {
+            return;
+        }
+        if !fetched_artist_images.read().is_empty() {
+            return;
+        }
+
+        let snapshot = {
+            let conf = config.read();
+            let Some(server) = &conf.server else { return; };
+            let Some(token) = &server.access_token else { return; };
+            let Some(user_id) = &server.user_id else { return; };
+            let service = server.service;
+            let url = server.url.clone();
+            let tok = token.clone();
+            let uid = user_id.clone();
+            let device_id = conf.device_id.clone();
+            (service, url, tok, uid, device_id)
+        };
+
+        is_fetching_images.set(true);
+
+        spawn(async move {
+            let (service, url, token, user_id, device_id) = snapshot;
+            let mut images: std::collections::HashMap<String, String> = Default::default();
+
+            match service {
+                config::MusicService::Jellyfin => {
+                    let client = JellyfinClient::new(&url, Some(&token), &device_id, Some(&user_id));
+                    match client.get_artists().await {
+                        Ok(artists) => {
+                            for artist in artists {
+                                if let Some(tags) = &artist.image_tags {
+                                    if let Some(tag) = tags.get("Primary") {
+                                        let img_url = utils::jellyfin_image::jellyfin_image_url(
+                                            &url,
+                                            &artist.id,
+                                            Some(tag.as_str()),
+                                            Some(&token),
+                                            512,
+                                            90,
+                                        );
+                                        images.insert(artist.name.clone(), img_url);
+                                    }
+                                }
+                            }
+                        }
+                        Err(e) => {
+                            dioxus::logger::tracing::warn!("Failed to fetch artist images: {}", e);
+                        }
+                    }
+                }
+                config::MusicService::Subsonic | config::MusicService::Custom => {
+                    let client = SubsonicClient::new(&url, &user_id, &token);
+                    match client.get_artists().await {
+                        Ok(artists) => {
+                            for artist in artists {
+                                if let Some(cover_art_id) = &artist.cover_art {
+                                    if let Ok(img_url) = client.cover_art_url(cover_art_id, Some(512)) {
+                                        images.insert(artist.name.clone(), img_url);
+                                    }
+                                }
+                            }
+                        }
+                        Err(e) => {
+                            dioxus::logger::tracing::warn!("Failed to fetch artist images: {}", e);
+                        }
+                    }
+                }
+            }
+
+            fetched_artist_images.set(images);
+            is_fetching_images.set(false);
+        });
+    });
+
     let jellyfin_artists = use_memo(move || {
         let lib = library.read();
+        let conf = config.read();
+        let use_artist_photo = conf.artist_photo_source == ArtistPhotoSource::ArtistPhoto;
+        let fetched = fetched_artist_images.read();
         let mut artist_map: HashMap<String, Option<PathBuf>> = HashMap::new();
         for album in &lib.jellyfin_albums {
             if !artist_map.contains_key(&album.artist) {
                 artist_map.insert(album.artist.clone(), album.cover_path.clone());
             }
         }
-        for name in artist_map.keys().cloned().collect::<Vec<_>>() {
-            if let Some(url) = lib.server_artist_images.get(&name) {
-                artist_map.insert(name, Some(PathBuf::from(format!("directurl:{}", url))));
+        if use_artist_photo {
+            for name in artist_map.keys().cloned().collect::<Vec<_>>() {
+                if let Some(url) = fetched.get(&name) {
+                    artist_map.insert(name, Some(PathBuf::from(format!("directurl:{}", url))));
+                }
             }
         }
         let offline = *is_offline.read();
@@ -115,8 +205,11 @@ pub fn JellyfinArtist(
         if artist.is_empty() {
             return None;
         }
-        if let Some(url) = lib.server_artist_images.get(artist.as_str()) {
-            return Some(utils::cover_url_from_string(url.clone()));
+        if conf.artist_photo_source == ArtistPhotoSource::ArtistPhoto {
+            let fetched = fetched_artist_images.read();
+            if let Some(url) = fetched.get(artist.as_str()) {
+                return Some(utils::cover_url_from_string(url.clone()));
+            }
         }
         lib.jellyfin_albums
             .iter()

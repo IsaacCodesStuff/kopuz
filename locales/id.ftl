@@ -339,3 +339,8 @@ ui_modern = Vaxry
 player_bar_position = Posisi bilah pemutar
 position_bottom = Bawah
 position_top = Atas
+
+metadata = Metadata
+artist_photo_source = Sumber foto artis
+artist_photo = Foto artis
+album_cover = Sampul album

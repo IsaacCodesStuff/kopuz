@@ -6,6 +6,7 @@ use config::{AppConfig, UiStyle};
 use dioxus::prelude::*;
 use hooks::use_library_items::use_library_items;
 use hooks::use_player_controller::PlayerController;
+use kopuz_route::Route;
 use reader::Library;
 use std::collections::HashSet;
 use std::path::PathBuf;
@@ -22,8 +23,11 @@ pub fn LocalLibrary(
 ) -> Element {
     let items = use_library_items(library);
     let mut sort_order = items.sort_order;
-    let mut scroll_stat = use_signal(|| 0.0);
-    let mut container_height = use_signal(|| f64::NAN); // Set on mount
+    let mut scroll_positions =
+        use_context::<Signal<std::collections::HashMap<Route, f64>>>();
+    let saved_scroll = scroll_positions.peek().get(&Route::Library).copied().unwrap_or(0.0);
+    let mut scroll_stat = use_signal(move || saved_scroll);
+    let mut container_height = use_signal(|| f64::NAN);
 
     use_effect(move || {
         let curr = sort_order.read().clone();
@@ -402,6 +406,7 @@ div {
             }
 
             div {
+                id: "library-scroll",
                 class: "flex-1 overflow-y-auto pb-20",
                 onmounted: move |event| {
                     spawn(async move {
@@ -409,6 +414,11 @@ div {
                             container_height.set(window.height());
                         }
                     });
+                    if saved_scroll > 0.0 {
+                        let _ = dioxus::document::eval(&format!(
+                            "let el = document.getElementById('library-scroll'); if (el) el.scrollTop = {saved_scroll};"
+                        ));
+                    }
                 },
                 onscroll: move |event| {
                     let new_scroll = event.scroll_top();
@@ -417,6 +427,7 @@ div {
                     if new_row != old_row {
                         scroll_stat.set(new_scroll);
                     }
+                    scroll_positions.write().insert(Route::Library, new_scroll);
                     let height = event.client_height() as f64;
                     if (height - *container_height.peek()).abs() > 1.0 {
                         container_height.set(height);

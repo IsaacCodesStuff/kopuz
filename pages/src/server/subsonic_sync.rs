@@ -6,6 +6,7 @@ use reader::Library;
 use reader::models::{Album, Track};
 use std::collections::HashSet;
 use std::path::PathBuf;
+use utils;
 
 pub struct SubsonicLibraryData {
     pub albums: Vec<Album>,
@@ -155,6 +156,25 @@ pub async fn sync_server_library(
                 out_genres = genres.into_iter().map(|g| (g.name, g.id)).collect();
             }
 
+            let mut artist_images = std::collections::HashMap::new();
+            if let Ok(artists) = remote.get_artists().await {
+                for artist in artists {
+                    if let Some(tags) = &artist.image_tags {
+                        if let Some(tag) = tags.get("Primary") {
+                            let url = utils::jellyfin_image::jellyfin_image_url(
+                                &server_url,
+                                &artist.id,
+                                Some(tag.as_str()),
+                                Some(&token),
+                                512,
+                                90,
+                            );
+                            artist_images.insert(artist.name, url);
+                        }
+                    }
+                }
+            }
+
             let mut lib_write = library.write();
             if clear_first {
                 lib_write.jellyfin_tracks.clear();
@@ -178,6 +198,7 @@ pub async fn sync_server_library(
             if !out_genres.is_empty() {
                 lib_write.jellyfin_genres = out_genres;
             }
+            lib_write.server_artist_images = artist_images;
         }
         MusicService::Subsonic | MusicService::Custom => {
             let data = fetch_subsonic_library(service, &server_url, &user_id, &token).await?;

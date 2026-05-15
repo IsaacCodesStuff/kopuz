@@ -1,6 +1,8 @@
 pub mod shared;
 pub mod normal;
 pub mod modern;
+pub mod navigation_controller;
+pub use navigation_controller::NavigationController;
 pub mod album_details;
 pub mod download_overlay;
 pub mod folder_detail;

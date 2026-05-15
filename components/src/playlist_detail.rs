@@ -318,7 +318,9 @@ pub fn PlaylistDetail(
                         #[cfg(not(target_arch = "wasm32"))]
                         if std::fs::remove_file(&t.path).is_ok() {
                             library.write().remove_track(&t.path);
-                            let lib_path = PathBuf::from("./cache/library.json");
+                            let lib_path = directories::ProjectDirs::from("com", "temidaradev", "kopuz")
+                                .map(|d| d.config_dir().join("library.json"))
+                                .unwrap_or_else(|| PathBuf::from("./config/library.json"));
                             let _ = library.read().save(&lib_path);
                         }
                     }

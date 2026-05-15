@@ -811,6 +811,19 @@ impl JellyfinClient {
         Ok(())
     }
 
+    pub async fn get_artists(&self) -> Result<Vec<Item>, String> {
+        let user_id = self.user_id()?;
+        let path = format!("/Users/{}/Items", user_id);
+        let fields = "ImageTags";
+        let query = [
+            ("IncludeItemTypes", "MusicArtist"),
+            ("Recursive", "true"),
+            ("Fields", fields),
+        ];
+        let items_resp: ItemsResponse = self.request_with_query(&path, &query).await?;
+        Ok(items_resp.items)
+    }
+
     pub async fn get_favorite_items(&self) -> Result<Vec<Item>, String> {
         let user_id = self.user_id()?;
         let path = format!("/Users/{}/Items", user_id);

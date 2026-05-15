@@ -33,6 +33,34 @@ use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 mod queue_state;
 mod web_storage;
 
+#[cfg(not(target_arch = "wasm32"))]
+fn migrate_legacy_locations() {
+    let Some(dirs) = directories::ProjectDirs::from("com", "temidaradev", "kopuz") else {
+        return;
+    };
+    let new_config = dirs.config_dir().to_path_buf();
+    let sentinel = new_config.join(".migrated");
+    if sentinel.exists() {
+        return;
+    }
+
+    let old_cache = dirs.cache_dir().to_path_buf();
+    let files = ["library.json", "playlists.json", "favorites.json", "queue_state.json"];
+    for file in files {
+        let src = old_cache.join(file);
+        let dst = new_config.join(file);
+        if src.exists() && !dst.exists() {
+            if let Err(e) = std::fs::rename(&src, &dst) {
+                tracing::warn!("Failed to migrate {file} from cache to config: {e}");
+            } else {
+                tracing::info!("Migrated {file} to config dir");
+            }
+        }
+    }
+
+    let _ = std::fs::write(&sentinel, "");
+}
+
 const FAVICON: Asset = asset!("../assets/favicon.ico");
 const MAIN_CSS: Asset = asset!("../assets/main.css");
 const THEME_CSS: Asset = asset!("../assets/themes.css");
@@ -310,7 +338,7 @@ fn main() {
     #[cfg(not(target_arch = "wasm32"))]
     {
         let log_dir = directories::ProjectDirs::from("com", "temidaradev", "kopuz")
-            .map(|dirs| dirs.data_local_dir().join("logs"))
+            .map(|dirs| dirs.cache_dir().join("logs"))
             .unwrap_or_else(|| std::path::PathBuf::from("logs"));
         let _ = std::fs::create_dir_all(&log_dir);
 
@@ -328,6 +356,8 @@ fn main() {
             )
             .init();
         tracing::info!("Log file: {}", log_dir.display());
+
+        migrate_legacy_locations();
 
         let presence: Option<Arc<Presence>> = match Presence::new("1470087339639443658") {
             Ok(p) => {
@@ -539,6 +569,8 @@ fn main() {
 fn App() -> Element {
     let mut library = use_signal(reader::Library::default);
     let mut current_route = use_signal(|| Route::Home);
+    let mut scroll_positions: Signal<std::collections::HashMap<Route, f64>> =
+        use_signal(std::collections::HashMap::new);
     let cache_dir = use_memo(move || {
         #[cfg(not(target_arch = "wasm32"))]
         {
@@ -563,15 +595,15 @@ fn App() -> Element {
         #[cfg(target_arch = "wasm32")]
         std::path::PathBuf::from("./config")
     });
-    let lib_path = use_memo(move || cache_dir().join("library.json"));
+    let lib_path = use_memo(move || config_dir().join("library.json"));
     let config_path = use_memo(move || config_dir().join("config.json"));
     let mut config = use_signal(config::AppConfig::default);
     #[allow(unused_variables)]
-    let playlist_path = use_memo(move || cache_dir().join("playlists.json"));
+    let playlist_path = use_memo(move || config_dir().join("playlists.json"));
     let mut playlist_store = use_signal(reader::PlaylistStore::default);
     #[allow(unused_variables)]
-    let favorites_path = use_memo(move || cache_dir().join("favorites.json"));
-    let queue_state_path = use_memo(move || cache_dir().join("queue_state.json"));
+    let favorites_path = use_memo(move || config_dir().join("favorites.json"));
+    let queue_state_path = use_memo(move || config_dir().join("queue_state.json"));
     let mut favorites_store = use_signal(FavoritesStore::default);
     let mut initial_load_done = use_signal(|| false);
     #[allow(unused_variables)]
@@ -664,6 +696,9 @@ fn App() -> Element {
     let mut selected_album_id = use_signal(String::new);
     let mut selected_playlist_id = use_signal(|| None::<String>);
     let mut selected_artist_name = use_signal(String::new);
+    let fetched_artist_images: Signal<std::collections::HashMap<String, String>> =
+        use_signal(std::collections::HashMap::new);
+    let is_fetching_artist_images = use_signal(|| false);
     let search_query = use_signal(String::new);
     let mut last_server_playlist_key = use_signal(|| None::<String>);
     let mut server_playlist_key_initialized = use_signal(|| false);
@@ -1197,15 +1232,24 @@ fn App() -> Element {
     });
 
     use_effect(move || {
-        let _ = current_route.read();
-        let _ = dioxus::document::eval(
-            "let el = document.getElementById('main-scroll-area'); if (el) el.scrollTop = 0;",
-        );
+        let route = *current_route.read();
+        let pos = scroll_positions.peek().get(&route).copied().unwrap_or(0.0);
+        let _ = dioxus::document::eval(&format!(
+            "let el = document.getElementById('main-scroll-area'); if (el) el.scrollTop = {pos};"
+        ));
     });
 
     provide_context(ctrl);
     provide_context(config);
     provide_context(download_queue);
+    provide_context(scroll_positions);
+    provide_context(fetched_artist_images);
+    provide_context(is_fetching_artist_images);
+    provide_context(components::NavigationController {
+        current_route,
+        selected_artist_name,
+        selected_album_id,
+    });
 
     hooks::use_player_task(ctrl);
 
@@ -1384,6 +1428,10 @@ fn App() -> Element {
                 div {
                     id: "main-scroll-area",
                     class: "flex-1 overflow-y-auto",
+                    onscroll: move |evt| {
+                        let pos = evt.scroll_top();
+                        scroll_positions.write().insert(*current_route.peek(), pos);
+                    },
                     match *current_route.read() {
                         Route::Home => rsx! {
                             pages::home::Home {

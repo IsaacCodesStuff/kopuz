@@ -346,3 +346,8 @@ ui_modern = Vaxry
 player_bar_position = プレーヤーバーの位置
 position_bottom = 下
 position_top = 上
+
+metadata = メタデータ
+artist_photo_source = アーティスト写真のソース
+artist_photo = アーティスト写真
+album_cover = アルバムカバー

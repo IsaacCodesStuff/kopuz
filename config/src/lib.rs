@@ -150,6 +150,13 @@ pub enum ArtistViewOrder {
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Default)]
+pub enum ArtistPhotoSource {
+    #[default]
+    AlbumCover,
+    ArtistPhoto,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Default)]
 pub enum BackBehavior {
     #[default]
     RewindThenPrev,
@@ -532,6 +539,8 @@ pub struct AppConfig {
     pub recently_played_server: Vec<String>,
     #[serde(default)]
     pub listen_now_style: ListenNowStyle,
+    #[serde(default)]
+    pub artist_photo_source: ArtistPhotoSource,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -670,6 +679,7 @@ impl Default for AppConfig {
             recently_played: Vec::new(),
             recently_played_server: Vec::new(),
             listen_now_style: ListenNowStyle::default(),
+            artist_photo_source: ArtistPhotoSource::AlbumCover,
         }
     }
 }

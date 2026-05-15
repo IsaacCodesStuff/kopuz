@@ -1,7 +1,7 @@
 <div align="center">
   <img src="kopuz/assets/banner.png" alt="Kopuz Logo" height="300"/>
 
-# Kopuz (Formerly Rusic)
+# Kopuz
 
 Kopuz is a modern, lightweight, music player application built with Rust and the Dioxus framework. It provides a clean and responsive interface for managing and enjoying your local music collection.
 
@@ -45,6 +45,7 @@ Kopuz allows you to scan your local directories for audio files, or stream from 
 - **Crossfade**: Blend track transitions for smoother automatic playback between songs on native desktop builds. Browser playback currently uses normal track switching.
 - **Channel Mode**: Switch between `Stereo`, `Mono`, `Left only`, `Right only`, and `Swap L/R` output modes.
 - **yt-dlp Integration**: Download audio directly from YouTube and other supported sites via yt-dlp. Choose your output format (Best Audio, MP3, FLAC, WAV, or MP4 video). FLAC is not recommended since yt-dlp remuxes lossy audio rather than decoding from a lossless source. Supports SponsorBlock, chapter splitting, cookies, rate limiting, and more. Requires `yt-dlp` installed on your system.
+- **Metadata Settings**: A dedicated Metadata section in Settings lets you control how artist images are sourced. Choose between **Album Cover** (uses the first album artwork as the artist photo, default) or **Artist Photo** (fetches actual artist images directly from your Jellyfin or Subsonic server). When switching to Artist Photo mode, images are fetched from the server in the background as soon as you open the Artists page. If an artist has no dedicated photo on your server, their first album cover is used as a fallback so nothing ever shows blank.
 
 ## Installation
 

@@ -336,3 +336,8 @@ remove_from_folder = Remove from Folder
 back_behavior = Back Button Behavior
 back_behavior_rewind = REWIND → PREV
 back_behavior_always_prev = ALWAYS PREV
+
+metadata = Metadata
+artist_photo_source = Artist Photo Source
+artist_photo = Artist Photo
+album_cover = Album Cover

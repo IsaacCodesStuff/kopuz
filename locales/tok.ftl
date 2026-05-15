@@ -340,3 +340,8 @@ ui_modern = Vaxry
 player_bar_position = ma pi ilo kalama
 position_bottom = anpa
 position_top = sewi
+
+metadata = ijo nanpa
+artist_photo_source = nasin sitelen jan pali
+artist_photo = sitelen jan pali
+album_cover = sitelen kulupu pi kalama sama

@@ -6,7 +6,7 @@ use components::settings_items::{
     ThemeSelector, ToggleSetting,
 };
 use components::settings_popups::{AddServerPopup, LoginPopup};
-use config::{AppConfig, MusicService, OfflineQuality};
+use config::{AppConfig, ArtistPhotoSource, MusicService, OfflineQuality};
 use dioxus::prelude::*;
 use hooks::use_player_controller::PlayerController;
 
@@ -357,6 +357,44 @@ pub fn Settings(config: Signal<AppConfig>) -> Element {
                                                 value: q.value_str(),
                                                 selected: *q == config.read().offline_quality,
                                                 "{q.label()}"
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                section {
+                    h2 {
+                        class: "text-lg font-semibold text-white/80 mb-4 border-b border-white/5 pb-2",
+                        "{i18n::t(\"metadata\")}"
+                    }
+                    div { class: "space-y-4",
+                        SettingItem {
+                            title: i18n::t("artist_photo_source").to_string(),
+                            control: rsx! {
+                                {
+                                    let current = config.read().artist_photo_source;
+                                    rsx! {
+                                        select {
+                                            class: "bg-stone-800 text-white rounded-lg px-3 py-2 text-sm border border-white/10 focus:outline-none focus:border-indigo-500",
+                                            onchange: move |evt| {
+                                                config.write().artist_photo_source = match evt.value().as_str() {
+                                                    "artist_photo" => ArtistPhotoSource::ArtistPhoto,
+                                                    _ => ArtistPhotoSource::AlbumCover,
+                                                };
+                                            },
+                                            option {
+                                                value: "album_cover",
+                                                selected: current == ArtistPhotoSource::AlbumCover,
+                                                "{i18n::t(\"album_cover\")}"
+                                            }
+                                            option {
+                                                value: "artist_photo",
+                                                selected: current == ArtistPhotoSource::ArtistPhoto,
+                                                "{i18n::t(\"artist_photo\")}"
                                             }
                                         }
                                     }

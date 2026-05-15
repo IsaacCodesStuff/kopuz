@@ -340,3 +340,8 @@ ui_modern = Vaxry
 player_bar_position = 播放栏位置
 position_bottom = 底部
 position_top = 顶部
+
+metadata = 元数据
+artist_photo_source = 艺术家照片来源
+artist_photo = 艺术家照片
+album_cover = 专辑封面

@@ -1,4 +1,4 @@
-#[derive(Clone, Copy, PartialEq, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
 pub enum Route {
     Home,
     Search,

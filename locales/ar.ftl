@@ -346,3 +346,8 @@ ui_modern = Vaxry
 player_bar_position = موضع شريط المشغل
 position_bottom = أسفل
 position_top = أعلى
+
+metadata = بيانات وصفية
+artist_photo_source = مصدر صورة الفنان
+artist_photo = صورة الفنان
+album_cover = غلاف الألبوم

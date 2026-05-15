@@ -3,16 +3,184 @@ use dioxus::prelude::*;
 use reader::Library;
 use reader::models::{Album, Track};
 
-// why these, its because code was looking complex and clippy said use type for them to make them look
-// good.
 type TrackRes = Vec<(Track, Option<utils::CoverUrl>)>;
 type AlbumRes = Vec<(Album, Option<utils::CoverUrl>)>;
 
 #[derive(Clone, Copy)]
 pub struct SearchData {
     pub genres: Memo<Vec<(String, Option<utils::CoverUrl>)>>,
-    pub search_results: Memo<Option<(TrackRes, AlbumRes)>>,
+    pub search_results: Resource<Option<(TrackRes, AlbumRes)>>,
     pub search_query: Signal<String>,
+}
+
+fn search_local(query: &str, tracks: Vec<Track>, albums: Vec<Album>) -> Option<(TrackRes, AlbumRes)> {
+    let album_map: std::collections::HashMap<&String, &Album> =
+        albums.iter().map(|a| (&a.id, a)).collect();
+
+    let result_tracks: TrackRes = tracks
+        .iter()
+        .filter(|t| {
+            t.title.to_lowercase().contains(query)
+                || t.artist.to_lowercase().contains(query)
+                || t.album.to_lowercase().contains(query)
+                || album_map
+                    .get(&t.album_id)
+                    .map(|a| a.genre.to_lowercase().contains(query))
+                    .unwrap_or(false)
+        })
+        .take(100)
+        .map(|t| {
+            let cover_url = album_map
+                .get(&t.album_id)
+                .and_then(|a| a.cover_path.as_ref())
+                .and_then(|c| utils::format_artwork_url(Some(c)));
+            (t.clone(), cover_url)
+        })
+        .collect();
+
+    let mut seen = std::collections::HashSet::new();
+    let result_albums: AlbumRes = albums
+        .iter()
+        .filter(|a| {
+            (a.title.to_lowercase().contains(query)
+                || a.artist.to_lowercase().contains(query)
+                || a.genre.to_lowercase().contains(query))
+                && seen.insert(a.title.trim().to_lowercase())
+        })
+        .take(30)
+        .map(|a| {
+            let cover_url = a
+                .cover_path
+                .as_ref()
+                .and_then(|c| utils::format_artwork_url(Some(c)));
+            (a.clone(), cover_url)
+        })
+        .collect();
+
+    Some((result_tracks, result_albums))
+}
+
+fn search_server(
+    query: &str,
+    tracks: Vec<Track>,
+    albums: Vec<Album>,
+    active_service: Option<MusicService>,
+    server: Option<config::MusicServer>,
+) -> Option<(TrackRes, AlbumRes)> {
+    let result_tracks: TrackRes = tracks
+        .iter()
+        .filter(|t| {
+            t.title.to_lowercase().contains(query)
+                || t.artist.to_lowercase().contains(query)
+                || t.album.to_lowercase().contains(query)
+        })
+        .take(100)
+        .map(|t| {
+            let cover_url = server.as_ref().and_then(|srv| {
+                let path_str = t.path.to_string_lossy();
+                let url = match active_service {
+                    Some(MusicService::Jellyfin) => {
+                        utils::jellyfin_image::jellyfin_image_url_from_path(
+                            &path_str,
+                            &srv.url,
+                            srv.access_token.as_deref(),
+                            80,
+                            80,
+                        )
+                    }
+                    Some(MusicService::Subsonic) | Some(MusicService::Custom) => {
+                        utils::subsonic_image::subsonic_image_url_from_path(
+                            &path_str,
+                            &srv.url,
+                            srv.access_token.as_deref(),
+                            80,
+                            80,
+                        )
+                    }
+                    None => None,
+                };
+                utils::map_cover_url(url)
+            });
+            (t.clone(), cover_url)
+        })
+        .collect();
+
+    let mut seen = std::collections::HashSet::new();
+    let result_albums: AlbumRes = albums
+        .iter()
+        .filter(|a| {
+            (a.title.to_lowercase().contains(query)
+                || a.artist.to_lowercase().contains(query)
+                || a.genre.to_lowercase().contains(query))
+                && seen.insert(a.title.trim().to_lowercase())
+        })
+        .take(30)
+        .map(|a| {
+            let cover_url = server.as_ref().and_then(|srv| {
+                a.cover_path.as_ref().and_then(|cover_path| {
+                    let path_str = cover_path.to_string_lossy();
+                    let url = match active_service {
+                        Some(MusicService::Jellyfin) => {
+                            utils::jellyfin_image::jellyfin_image_url_from_path(
+                                &path_str,
+                                &srv.url,
+                                srv.access_token.as_deref(),
+                                360,
+                                80,
+                            )
+                        }
+                        Some(MusicService::Subsonic) | Some(MusicService::Custom) => {
+                            utils::subsonic_image::subsonic_image_url_from_path(
+                                &path_str,
+                                &srv.url,
+                                srv.access_token.as_deref(),
+                                360,
+                                80,
+                            )
+                        }
+                        None => None,
+                    };
+                    utils::map_cover_url(url)
+                })
+            });
+            (a.clone(), cover_url)
+        })
+        .collect();
+
+    Some((result_tracks, result_albums))
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+async fn run_search(
+    query: String,
+    tracks: Vec<Track>,
+    albums: Vec<Album>,
+    active_source: MusicSource,
+    active_service: Option<MusicService>,
+    server: Option<config::MusicServer>,
+) -> Option<(TrackRes, AlbumRes)> {
+    tokio::task::spawn_blocking(move || match active_source {
+        MusicSource::Local => search_local(&query, tracks, albums),
+        MusicSource::Server => search_server(&query, tracks, albums, active_service, server),
+    })
+    .await
+    .ok()
+    .flatten()
+}
+
+#[cfg(target_arch = "wasm32")]
+async fn run_search(
+    query: String,
+    tracks: Vec<Track>,
+    albums: Vec<Album>,
+    active_source: MusicSource,
+    active_service: Option<MusicService>,
+    server: Option<config::MusicServer>,
+) -> Option<(TrackRes, AlbumRes)> {
+    match active_source {
+        MusicSource::Local => search_local(&query, tracks, albums),
+        MusicSource::Server => search_server(&query, tracks, albums, active_service, server),
+    }
 }
 
 pub fn use_search_data(
@@ -106,155 +274,26 @@ pub fn use_search_data(
         result
     });
 
-    let search_results = use_memo(move || {
+    let search_results = use_resource(move || {
         let query = search_query.read().to_lowercase();
-        if query.trim().is_empty() {
-            return None;
-        }
-
-        let lib = library.read();
-        let conf = config.read();
-        let active_source = conf.active_source.clone();
-        let active_service = conf.active_service();
-        let server = conf.server.clone();
-
-        let album_map: std::collections::HashMap<&String, &Album> =
-            lib.albums.iter().map(|a| (&a.id, a)).collect();
-
-        let tracks: Vec<(Track, Option<utils::CoverUrl>)>;
-        let albums: Vec<(Album, Option<utils::CoverUrl>)>;
-
-        match active_source {
-            MusicSource::Local => {
-                tracks = lib
-                    .tracks
-                    .iter()
-                    .filter(|t| {
-                        t.title.to_lowercase().contains(&query)
-                            || t.artist.to_lowercase().contains(&query)
-                            || t.album.to_lowercase().contains(&query)
-                            || album_map
-                                .get(&t.album_id)
-                                .map(|a| a.genre.to_lowercase().contains(&query))
-                                .unwrap_or(false)
-                    })
-                    .map(|t| {
-                        let cover_url = album_map
-                            .get(&t.album_id)
-                            .and_then(|a| a.cover_path.as_ref())
-                            .and_then(|c| utils::format_artwork_url(Some(c)));
-                        (t.clone(), cover_url)
-                    })
-                    .collect();
-
-                let mut seen_titles = std::collections::HashSet::new();
-                albums = lib
-                    .albums
-                    .iter()
-                    .filter(|a| {
-                        (a.title.to_lowercase().contains(&query)
-                            || a.artist.to_lowercase().contains(&query)
-                            || a.genre.to_lowercase().contains(&query))
-                            && seen_titles.insert(a.title.trim().to_lowercase())
-                    })
-                    .map(|a| {
-                        let cover_url = a
-                            .cover_path
-                            .as_ref()
-                            .and_then(|c| utils::format_artwork_url(Some(c)));
-                        (a.clone(), cover_url)
-                    })
-                    .collect();
+        let (active_source, active_service, server) = {
+            let conf = config.read();
+            (conf.active_source.clone(), conf.active_service(), conf.server.clone())
+        };
+        let (tracks, albums) = {
+            let lib = library.read();
+            match &active_source {
+                MusicSource::Local => (lib.tracks.clone(), lib.albums.clone()),
+                MusicSource::Server => (lib.jellyfin_tracks.clone(), lib.jellyfin_albums.clone()),
             }
-            MusicSource::Server => {
-                tracks = lib
-                    .jellyfin_tracks
-                    .iter()
-                    .filter(|t| {
-                        t.title.to_lowercase().contains(&query)
-                            || t.artist.to_lowercase().contains(&query)
-                            || t.album.to_lowercase().contains(&query)
-                    })
-                    .map(|t| {
-                        let cover_url = if let Some(server) = &server {
-                            let path_str = t.path.to_string_lossy();
-                            let url = match active_service {
-                                Some(MusicService::Jellyfin) => {
-                                    utils::jellyfin_image::jellyfin_image_url_from_path(
-                                        &path_str,
-                                        &server.url,
-                                        server.access_token.as_deref(),
-                                        80,
-                                        80,
-                                    )
-                                }
-                                Some(MusicService::Subsonic) | Some(MusicService::Custom) => {
-                                    utils::subsonic_image::subsonic_image_url_from_path(
-                                        &path_str,
-                                        &server.url,
-                                        server.access_token.as_deref(),
-                                        80,
-                                        80,
-                                    )
-                                }
-                                None => None,
-                            };
-                            utils::map_cover_url(url)
-                        } else {
-                            None
-                        };
-                        (t.clone(), cover_url)
-                    })
-                    .collect();
+        };
 
-                let mut seen_titles = std::collections::HashSet::new();
-                albums = lib
-                    .jellyfin_albums
-                    .iter()
-                    .filter(|a| {
-                        (a.title.to_lowercase().contains(&query)
-                            || a.artist.to_lowercase().contains(&query)
-                            || a.genre.to_lowercase().contains(&query))
-                            && seen_titles.insert(a.title.trim().to_lowercase())
-                    })
-                    .take(50)
-                    .map(|a| {
-                        let cover_url = if let Some(server) = &server {
-                            a.cover_path.as_ref().and_then(|cover_path| {
-                                let path_str = cover_path.to_string_lossy();
-                                let url = match active_service {
-                                    Some(MusicService::Jellyfin) => {
-                                        utils::jellyfin_image::jellyfin_image_url_from_path(
-                                            &path_str,
-                                            &server.url,
-                                            server.access_token.as_deref(),
-                                            360,
-                                            80,
-                                        )
-                                    }
-                                    Some(MusicService::Subsonic) | Some(MusicService::Custom) => {
-                                        utils::subsonic_image::subsonic_image_url_from_path(
-                                            &path_str,
-                                            &server.url,
-                                            server.access_token.as_deref(),
-                                            360,
-                                            80,
-                                        )
-                                    }
-                                    None => None,
-                                };
-                                utils::map_cover_url(url)
-                            })
-                        } else {
-                            None
-                        };
-                        (a.clone(), cover_url)
-                    })
-                    .collect();
+        async move {
+            if query.trim().is_empty() {
+                return None;
             }
+            run_search(query, tracks, albums, active_source, active_service, server).await
         }
-
-        Some((tracks, albums))
     });
 
     SearchData {

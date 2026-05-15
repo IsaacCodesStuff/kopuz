@@ -340,3 +340,8 @@ ui_modern = Vaxry
 player_bar_position = 플레이어 바 위치
 position_bottom = 아래
 position_top = 위
+
+metadata = 메타데이터
+artist_photo_source = 아티스트 사진 출처
+artist_photo = 아티스트 사진
+album_cover = 앨범 커버

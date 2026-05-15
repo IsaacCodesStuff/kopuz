@@ -1,6 +1,7 @@
 use config::{AppConfig, MusicService, UiStyle};
 use dioxus::prelude::*;
 use hooks::use_player_controller::PlayerController;
+use kopuz_route::Route;
 use reader::{Library, Track};
 use std::collections::HashMap;
 
@@ -71,9 +72,24 @@ pub fn JellyfinLogs(library: Signal<Library>, config: Signal<AppConfig>) -> Elem
     });
 
     let is_modern = config.read().ui_style == UiStyle::Modern;
+    let mut scroll_positions =
+        use_context::<Signal<std::collections::HashMap<Route, f64>>>();
+    let saved_scroll = scroll_positions.peek().get(&Route::Activity).copied().unwrap_or(0.0);
 
     rsx! {
-        div { class: if is_modern { "px-6 pt-6 pb-24 h-full overflow-y-auto w-full" } else { "p-8 h-full overflow-y-auto w-full" },
+        div {
+            id: "activity-scroll",
+            class: if is_modern { "px-6 pt-6 pb-24 h-full overflow-y-auto w-full" } else { "p-8 h-full overflow-y-auto w-full" },
+            onmounted: move |_| {
+                if saved_scroll > 0.0 {
+                    let _ = dioxus::document::eval(&format!(
+                        "let el = document.getElementById('activity-scroll'); if (el) el.scrollTop = {saved_scroll};"
+                    ));
+                }
+            },
+            onscroll: move |evt| {
+                scroll_positions.write().insert(Route::Activity, evt.scroll_top());
+            },
             div { class: "max-w-[1600px] mx-auto",
                 div { class: "mb-8 flex items-end justify-between",
                     div {

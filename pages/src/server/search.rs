@@ -204,7 +204,7 @@ pub fn JellyfinSearch(
             } else {
                 SearchBar { search_query: data.search_query }
 
-                if let Some((tracks, albums)) = (data.search_results)() {
+                if let Some(Some((tracks, albums))) = data.search_results.cloned() {
                     SearchResults {
                         search_query: data.search_query.read().clone(),
                         tracks: tracks.clone(),

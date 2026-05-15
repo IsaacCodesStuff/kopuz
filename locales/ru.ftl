@@ -340,3 +340,8 @@ ui_modern = Vaxry
 player_bar_position = Положение панели плеера
 position_bottom = Снизу
 position_top = Сверху
+
+metadata = Метаданные
+artist_photo_source = Источник фото исполнителя
+artist_photo = Фото исполнителя
+album_cover = Обложка альбома

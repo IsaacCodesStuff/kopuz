@@ -340,3 +340,8 @@ ui_modern = Vaxry
 player_bar_position = Oynatıcı çubuğu konumu
 position_bottom = Alt
 position_top = Üst
+
+metadata = Meta veri
+artist_photo_source = Sanatçı fotoğraf kaynağı
+artist_photo = Sanatçı fotoğrafı
+album_cover = Albüm kapağı

@@ -1,4 +1,5 @@
 use crate::dots_menu::{DotsMenu, MenuAction};
+use crate::NavigationController;
 use config::{AppConfig, UiStyle};
 use dioxus::prelude::*;
 use reader::models::Track;
@@ -39,6 +40,7 @@ pub fn TrackRow(
     #[props(default = None)] row_num: Option<usize>,
 ) -> Element {
     let config = use_context::<Signal<AppConfig>>();
+    let nav_ctrl = use_context::<NavigationController>();
     let is_modern = config.read().ui_style == UiStyle::Modern;
     let add_to_queue_text = i18n::t("add_to_queue").to_string();
     let add_to_playlist_text = i18n::t("add_to_playlist").to_string();
@@ -216,11 +218,20 @@ pub fn TrackRow(
                         }
                     }
                     span {
-                        class: "text-sm font-medium truncate",
+                        class: "text-sm font-medium truncate cursor-pointer hover:underline",
                         style: if is_currently_playing {
                             "color: var(--color-indigo-500); font-weight: 600;"
                         } else {
                             "color: rgba(255,255,255,0.9);"
+                        },
+                        onclick: {
+                            let album_id = track.album_id.clone();
+                            move |evt: MouseEvent| {
+                                evt.stop_propagation();
+                                if !is_selection_mode {
+                                    nav_ctrl.navigate_to_album(album_id.clone());
+                                }
+                            }
                         },
                         "{track.title}"
                     }
@@ -234,8 +245,17 @@ pub fn TrackRow(
 
                 div { class: "flex items-center min-w-0 pr-3",
                     span {
-                        class: "text-sm truncate",
+                        class: "text-sm truncate cursor-pointer hover:underline",
                         style: "color: rgba(255,255,255,0.45);",
+                        onclick: {
+                            let artist = track.artist.clone();
+                            move |evt: MouseEvent| {
+                                evt.stop_propagation();
+                                if !is_selection_mode {
+                                    nav_ctrl.navigate_to_artist(artist.clone());
+                                }
+                            }
+                        },
                         "{track.artist}"
                     }
                 }
@@ -355,15 +375,36 @@ pub fn TrackRow(
 
             div { class: "flex-1 min-w-0 pr-4",
                 p {
-                    class: "text-sm font-medium truncate",
+                    class: "text-sm font-medium truncate cursor-pointer hover:underline",
                     style: if is_currently_playing {
                         "color: var(--color-indigo-500);"
                     } else {
                         "opacity: 0.9;"
                     },
+                    onclick: {
+                        let album_id = track.album_id.clone();
+                        move |evt: MouseEvent| {
+                            evt.stop_propagation();
+                            if !is_selection_mode {
+                                nav_ctrl.navigate_to_album(album_id.clone());
+                            }
+                        }
+                    },
                     "{track.title}"
                 }
-                p { class: "text-xs text-slate-500 truncate", "{track.artist}" }
+                p {
+                    class: "text-xs text-slate-500 truncate cursor-pointer hover:underline hover:text-slate-400 transition-colors",
+                    onclick: {
+                        let artist = track.artist.clone();
+                        move |evt: MouseEvent| {
+                            evt.stop_propagation();
+                            if !is_selection_mode {
+                                nav_ctrl.navigate_to_artist(artist.clone());
+                            }
+                        }
+                    },
+                    "{track.artist}"
+                }
             }
 
             if !is_selection_mode {

@@ -1,3 +1,4 @@
+use crate::NavigationController;
 use config::PlayerBarPosition;
 use dioxus::prelude::*;
 use hooks::use_player_controller::{LoopMode, PlayerController};
@@ -48,6 +49,7 @@ pub fn BottombarNormal(
 
     let volume_percent = *volume.read() * 100.0;
     let mut ctrl = use_context::<PlayerController>();
+    let nav_ctrl = use_context::<NavigationController>();
 
     let is_favorite = get_favorite(&queue, &current_queue_index, &favorites_store);
     let heart_class = if is_favorite {
@@ -83,8 +85,23 @@ pub fn BottombarNormal(
                 }
                 div {
                     class: "flex flex-col min-w-0",
-                    span { class: "text-sm font-bold text-white/90 truncate hover:underline cursor-pointer", "{current_song_title}" }
-                    span { class: "text-xs text-slate-400 truncate hover:text-white/70 cursor-pointer", "{current_song_artist}" }
+                    span {
+                        class: "text-sm font-bold text-white/90 truncate hover:underline cursor-pointer",
+                        onclick: move |_| {
+                            let idx = *current_queue_index.read();
+                            let album_id = queue.read().get(idx).map(|t| t.album_id.clone()).unwrap_or_default();
+                            nav_ctrl.navigate_to_album(album_id);
+                        },
+                        "{current_song_title}"
+                    }
+                    span {
+                        class: "text-xs text-slate-400 truncate hover:text-white/70 hover:underline cursor-pointer",
+                        onclick: move |_| {
+                            let artist = current_song_artist.read().clone();
+                            nav_ctrl.navigate_to_artist(artist);
+                        },
+                        "{current_song_artist}"
+                    }
                 }
                 button {
                     class: "{heart_class}",

@@ -690,6 +690,7 @@ version = "0.3.6"
 dependencies = [
  "config",
  "dioxus",
+ "directories",
  "hooks",
  "i18n",
  "kopuz_route",

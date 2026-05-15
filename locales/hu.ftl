@@ -340,3 +340,8 @@ ui_modern = Vaxry
 player_bar_position = Lejátszó sáv pozíciója
 position_bottom = Lent
 position_top = Fent
+
+metadata = Metaadatok
+artist_photo_source = Előadó fotójának forrása
+artist_photo = Előadó fotója
+album_cover = Albumborító

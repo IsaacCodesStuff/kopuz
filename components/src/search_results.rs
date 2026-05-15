@@ -104,8 +104,9 @@ pub fn SearchResults(
                                             active_menu_track.set(None);
                                             if std::fs::remove_file(&track_delete.path).is_ok() {
                                                 library.write().remove_track(&track_delete.path);
-                                                let cache_dir = std::path::Path::new("./cache").to_path_buf();
-                                                let lib_path = cache_dir.join("library.json");
+                                                let lib_path = directories::ProjectDirs::from("com", "temidaradev", "kopuz")
+                                                    .map(|d| d.config_dir().join("library.json"))
+                                                    .unwrap_or_else(|| std::path::PathBuf::from("./config/library.json"));
                                                 let _ = library.read().save(&lib_path);
                                             }
                                         },

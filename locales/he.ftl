@@ -340,3 +340,8 @@ ui_modern = Vaxry
 player_bar_position = מיקום סרגל הנגן
 position_bottom = למטה
 position_top = למעלה
+
+metadata = מטא-נתונים
+artist_photo_source = מקור תמונת אמן
+artist_photo = תמונת אמן
+album_cover = עטיפת אלבום

@@ -673,9 +673,6 @@
   .w-\[1px\] {
     width: 1px;
   }
-  .w-\[4\.5rem\] {
-    width: 4.5rem;
-  }
   .w-auto {
     width: auto;
   }
@@ -1096,6 +1093,12 @@
     background-color: color-mix(in srgb, #000 0%, transparent);
     @supports (color: color-mix(in lab, red, red)) {
       background-color: color-mix(in oklab, var(--color-black) 0%, transparent);
+    }
+  }
+  .bg-black\/20 {
+    background-color: color-mix(in srgb, #000 20%, transparent);
+    @supports (color: color-mix(in lab, red, red)) {
+      background-color: color-mix(in oklab, var(--color-black) 20%, transparent);
     }
   }
   .bg-black\/30 {
