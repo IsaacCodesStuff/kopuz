@@ -285,6 +285,7 @@ ytdlp_write_xattrs = Escribir xattrs
 ytdlp_no_mtime = No establecer mtime del archivo
 ytdlp_unlimited = ilimitado
 ytdlp_none = Ninguno
+ytdlp_js_runtimes_tooltip = Si YouTube falla con errores de JS o de desafío captcha, configura aquí un runtime de JS, por ejemplo deno o node.
 ytdlp_format_best_audio = Mejor Audio
 ytdlp_format_mp3 = MP3
 ytdlp_format_flac = FLAC

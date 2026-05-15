@@ -284,6 +284,7 @@ ytdlp_write_xattrs = o sitelen e xattrs
 ytdlp_no_mtime = o pali ala e mtime
 ytdlp_unlimited = suli ale
 ytdlp_none = ala
+ytdlp_js_runtimes_tooltip = sina lon e pakala JS anu pakala captcha lon YouTube la, o pana e ilo JS lon ni, sama deno anu node.
 ytdlp_format_best_audio = kalama pona mute
 ytdlp_format_mp3 = MP3
 ytdlp_format_flac = FLAC

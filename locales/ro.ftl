@@ -284,6 +284,7 @@ ytdlp_write_xattrs = Scrie xattrs
 ytdlp_no_mtime = Nu seta mtime din fișier
 ytdlp_unlimited = nelimitat
 ytdlp_none = Niciunul
+ytdlp_js_runtimes_tooltip = Dacă YouTube eșuează cu erori JS sau provocări captcha, setează aici un runtime JS, de exemplu deno sau node.
 ytdlp_format_best_audio = Cel mai bun Audio
 ytdlp_format_mp3 = MP3
 ytdlp_format_flac = FLAC

@@ -308,6 +308,9 @@ fn build_command(
         cmd.arg("--cookies-from-browser")
             .arg(&opts.cookies_from_browser);
     }
+    if !opts.js_runtimes.trim().is_empty() {
+        cmd.arg("--js-runtimes").arg(opts.js_runtimes.trim());
+    }
 
     cmd.arg(url)
         .stdout(std::process::Stdio::piped())
@@ -905,6 +908,21 @@ fn OptionsPanel(config: Signal<AppConfig>) -> Element {
                             option { value: "safari",   selected: opts().cookies_from_browser == "safari",   "Safari" }
                             option { value: "brave",    selected: opts().cookies_from_browser == "brave",    "Brave" }
                             option { value: "vivaldi",  selected: opts().cookies_from_browser == "vivaldi",  "Vivaldi" }
+                        }
+                    }
+                    div {
+                        label { class: "text-xs text-slate-500 mb-1 flex items-center gap-1.5",
+                            span { "--js-runtimes" }
+                            i {
+                                class: "fa-solid fa-circle-info text-[11px] text-slate-400 cursor-help",
+                                title: "{i18n::t(\"ytdlp_js_runtimes_tooltip\")}"
+                            }
+                        }
+                        input {
+                            class: "w-full bg-black/30 border border-white/10 rounded-lg px-3 py-1.5 text-white text-sm placeholder-slate-700 focus:outline-none focus:border-white/30 transition-colors",
+                            placeholder: "deno, node, bun or quickjs[:/path]",
+                            value: "{opts().js_runtimes}",
+                            oninput: move |e| config.write().ytdlp_options.js_runtimes = e.value(),
                         }
                     }
                 }

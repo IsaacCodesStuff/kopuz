@@ -284,6 +284,7 @@ ytdlp_write_xattrs = xattrs yaz
 ytdlp_no_mtime = Dosya mtime (değiştirilme zamanı) ayarlama
 ytdlp_unlimited = sınırsız
 ytdlp_none = Yok
+ytdlp_js_runtimes_tooltip = YouTube JS veya captcha doğrulama hatalarıyla başarısız olursa, buraya deno ya da node gibi bir JS çalışma zamanı girin.
 ytdlp_format_best_audio = En İyi Ses
 ytdlp_format_mp3 = MP3
 ytdlp_format_flac = FLAC

@@ -290,6 +290,7 @@ ytdlp_write_xattrs = xattrs を出力
 ytdlp_no_mtime = ファイルの変更時間を設定しない
 ytdlp_unlimited = 無制限
 ytdlp_none = なし
+ytdlp_js_runtimes_tooltip = YouTube が JS エラーや captcha チャレンジ エラーで失敗する場合は、ここで deno や node などの JS ランタイムを設定してください。
 ytdlp_format_best_audio = 最高音質
 ytdlp_format_mp3 = MP3
 ytdlp_format_flac = FLAC

@@ -284,6 +284,7 @@ ytdlp_write_xattrs = xattrs mentése
 ytdlp_no_mtime = Ne módosítsa a fájl idejét (mtime)
 ytdlp_unlimited = korlátlan
 ytdlp_none = Nincs
+ytdlp_js_runtimes_tooltip = Ha a YouTube JS- vagy captcha-hiba miatt nem működik, állíts be itt egy JS futtatókörnyezetet, például deno-t vagy node-ot.
 ytdlp_format_best_audio = Legjobb hang
 ytdlp_format_mp3 = MP3
 ytdlp_format_flac = FLAC

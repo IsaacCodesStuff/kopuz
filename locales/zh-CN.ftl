@@ -284,6 +284,7 @@ ytdlp_write_xattrs = 写入扩展属性
 ytdlp_no_mtime = 不设置文件 mtime
 ytdlp_unlimited = 无限制
 ytdlp_none = 无
+ytdlp_js_runtimes_tooltip = 如果 YouTube 因 JS 错误或 captcha 挑战而失败，请在这里设置 JS 运行时，例如 deno 或 node。
 ytdlp_format_best_audio = 最佳音频
 ytdlp_format_mp3 = MP3
 ytdlp_format_flac = FLAC

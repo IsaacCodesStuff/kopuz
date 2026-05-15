@@ -284,6 +284,7 @@ ytdlp_write_xattrs = כתוב xattrs
 ytdlp_no_mtime = אל תגדיר mtime לקובץ
 ytdlp_unlimited = ללא הגבלה
 ytdlp_none = ללא
+ytdlp_js_runtimes_tooltip = אם YouTube נכשל עם שגיאות JS או אתגרי captcha, הגדר כאן סביבת ריצה של JS, למשל deno או node.
 ytdlp_format_best_audio = אודיו מיטבי
 ytdlp_format_mp3 = MP3
 ytdlp_format_flac = FLAC

@@ -284,6 +284,7 @@ ytdlp_write_xattrs = Зберігати xattrs
 ytdlp_no_mtime = Не змінювати mtime файлу
 ytdlp_unlimited = необмежений
 ytdlp_none = Немає
+ytdlp_js_runtimes_tooltip = Якщо YouTube завершується з помилками JS або captcha, вкажіть тут JS-рантайм, наприклад deno або node.
 ytdlp_format_best_audio = Найкраще аудіо
 ytdlp_format_mp3 = MP3
 ytdlp_format_flac = FLAC

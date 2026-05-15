@@ -284,6 +284,7 @@ ytdlp_write_xattrs = xattrs 저장
 ytdlp_no_mtime = 파일 mtime 설정 해제
 ytdlp_unlimited = 무제한
 ytdlp_none = 없음
+ytdlp_js_runtimes_tooltip = YouTube가 JS 오류나 captcha 챌린지 오류로 실패하면 여기에서 deno 또는 node 같은 JS 런타임을 설정하세요.
 ytdlp_format_best_audio = 최고 음질
 ytdlp_format_mp3 = MP3
 ytdlp_format_flac = FLAC

@@ -290,6 +290,7 @@ ytdlp_write_xattrs = xattrs كتابة
 ytdlp_no_mtime = mtime لا تقم بتعيين ملف
 ytdlp_unlimited = غير محدود
 ytdlp_none = لا شيء
+ytdlp_js_runtimes_tooltip = إذا فشل YouTube بسبب أخطاء JavaScript أو تحديات captcha، فعيّن هنا بيئة تشغيل JavaScript مثل deno أو node.
 ytdlp_format_best_audio = أفضل صوت
 ytdlp_format_mp3 = MP3
 ytdlp_format_flac = FLAC

@@ -46,6 +46,8 @@ pub struct YtdlpOptions {
     pub rate_limit: String,
     #[serde(default)]
     pub cookies_from_browser: String,
+    #[serde(default)]
+    pub js_runtimes: String,
     #[serde(default = "default_audio_quality")]
     pub audio_quality: u8,
 }
@@ -74,6 +76,7 @@ impl Default for YtdlpOptions {
             no_mtime: false,
             rate_limit: String::new(),
             cookies_from_browser: String::new(),
+            js_runtimes: String::new(),
             audio_quality: 0,
         }
     }

@@ -284,6 +284,7 @@ ytdlp_write_xattrs = Αποθήκευση xattrs
 ytdlp_no_mtime = Να μην οριστεί το mtime του αρχείου
 ytdlp_unlimited = απεριόριστο
 ytdlp_none = Κανένα
+ytdlp_js_runtimes_tooltip = Αν το YouTube αποτυγχάνει με σφάλματα JS ή προκλήσεις captcha, ορίστε εδώ ένα runtime JS, π.χ. deno ή node.
 ytdlp_format_best_audio = Καλύτερος Ήχος
 ytdlp_format_mp3 = MP3
 ytdlp_format_flac = FLAC

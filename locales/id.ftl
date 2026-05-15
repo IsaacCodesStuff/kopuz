@@ -80,6 +80,7 @@ ytdlp_write_xattrs = Tulis xattrs
 ytdlp_no_mtime = Jangan set mtime
 ytdlp_unlimited = tak terbatas
 ytdlp_none = Nonaktif
+ytdlp_js_runtimes_tooltip = Jika YouTube gagal karena error JS atau tantangan captcha, atur runtime JS di sini, misalnya deno atau node.
 ytdlp_format_best_audio = Audio Terbaik
 ytdlp_format_mp3 = MP3
 ytdlp_format_flac = FLAC
