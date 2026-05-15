@@ -1,6 +1,12 @@
 use tokio::sync::mpsc;
 
 pub mod listen_moe;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod j1;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod doujinstyle;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod vocaloid;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct RadioMetadata {

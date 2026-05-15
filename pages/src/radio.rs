@@ -19,8 +19,6 @@ struct RadioStation {
     name: &'static str,
     description: &'static str,
     icon: &'static str,
-    gradient_from: &'static str,
-    gradient_to: &'static str,
     streams: &'static [RadioStream],
 }
 
@@ -30,11 +28,37 @@ const STATIONS: &[RadioStation] = &[
         name: "LISTEN.moe",
         description: "Anime and Korean pop music, 24/7.",
         icon: "fa-solid fa-radio",
-        gradient_from: "from-pink-600/10",
-        gradient_to: "to-purple-900/30",
         streams: &[
             RadioStream { name: "J-Pop", id: "jpop", icon: "fa-solid fa-music" },
             RadioStream { name: "K-Pop", id: "kpop", icon: "fa-solid fa-compact-disc" },
+        ],
+    },
+    RadioStation {
+        id: "j1",
+        name: "J1 Tokyo",
+        description: "Current chart hits and classic songs from Japan.",
+        icon: "fa-solid fa-radio",
+        streams: &[
+            RadioStream { name: "J1 HITS", id: "J1HITS", icon: "fa-solid fa-fire" },
+            RadioStream { name: "J1 GOLD", id: "J1GOLD", icon: "fa-solid fa-compact-disc" },
+        ],
+    },
+    RadioStation {
+        id: "doujinstyle",
+        name: "Doujinstyle",
+        description: "Doujin music, video game soundtracks, and more.",
+        icon: "fa-solid fa-radio",
+        streams: &[
+            RadioStream { name: "Live Stream", id: "main", icon: "fa-solid fa-play" },
+        ],
+    },
+    RadioStation {
+        id: "vocaloid",
+        name: "Vocaloid Radio",
+        description: "Vocaloid Hits from Japan. We play it all!",
+        icon: "fa-solid fa-radio",
+        streams: &[
+            RadioStream { name: "Live Stream", id: "main", icon: "fa-solid fa-play" },
         ],
     }
 ];
@@ -46,7 +70,7 @@ pub fn Radio(props: RadioProps) -> Element {
     rsx! {
         div { class: "p-8 w-full h-full flex flex-col overflow-y-auto bg-black/20",
             div { class: "mb-8",
-                h1 { class: "text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-purple-400 mb-2",
+                h1 { class: "text-4xl font-extrabold text-transparent bg-clip-text from-indigo-400 to-purple-400 mb-2",
                     "Radio Stations"
                 }
                 p { class: "text-white/60 text-lg",
@@ -63,7 +87,7 @@ pub fn Radio(props: RadioProps) -> Element {
                                 ctrl.play_radio(station.id, station.streams[0].id);
                             }
                         },
-                        div { class: "absolute inset-0 bg-gradient-to-br {station.gradient_from} {station.gradient_to} opacity-50 pointer-events-none group-hover:opacity-70 transition-opacity" }
+                        div { class: "absolute inset-0 opacity-50 pointer-events-none group-hover:opacity-70 transition-opacity" }
                         div { class: "p-6 relative z-10 flex flex-col md:flex-row md:items-center gap-6",
                             // Station Info
                             div { class: "flex items-center gap-4 flex-1",
