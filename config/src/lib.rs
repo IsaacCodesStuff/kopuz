@@ -485,7 +485,11 @@ pub struct AppConfig {
     #[serde(default)]
     pub musicbrainz_token: String,
     #[serde(default)]
-    pub lastfm_token: String,
+    pub lastfm_api_key: String,
+    #[serde(default)]
+    pub lastfm_api_secret: String,
+    #[serde(default)]
+    pub lastfm_session_key: String,
     #[serde(default = "default_language")]
     pub language: String,
     #[serde(default)]
@@ -646,7 +650,9 @@ impl Default for AppConfig {
             artist_view_order: default_artist_view_order(),
             listen_counts: HashMap::new(),
             musicbrainz_token: String::new(),
-            lastfm_token: String::new(),
+            lastfm_api_key: String::new(),
+            lastfm_api_secret: String::new(),
+            lastfm_session_key: String::new(),
             language: default_language(),
             reduce_animations: false,
             show_source_toggle: default_show_source_toggle(),
