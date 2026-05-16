@@ -47,8 +47,8 @@ impl RadioMetadataProvider for DoujinstyleProvider {
 
                 if let Ok(resp) = req {
                     if let Ok(json) = resp.json::<DoujinstyleResponse>().await {
-                        let title = json.data.track_title.unwrap_or_else(|| json.data.title.unwrap_or_default());
-                        let artist = json.data.track_artist.unwrap_or_default();
+                        let title = json.data.track_title.unwrap_or_else(|| json.data.title.unwrap_or_else(|| "Unknown Title".to_string()));
+                        let artist = json.data.track_artist.unwrap_or_else(|| "Unknown Artist".to_string());
                         let cover_url = json.data.artwork_urls.and_then(|a| a.large);
 
                         let comparison_str = format!("{} - {}", artist, title);

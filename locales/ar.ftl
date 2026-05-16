@@ -14,9 +14,6 @@ search = بحث
 favorites = المفضلة
 radio = Radio
 discover = Discover
-# Need Localationz
-radio = Radio
-discover = Discover
 logs = السجلات
 activity = النشاط
 general = عام
@@ -378,5 +375,5 @@ radio_play = تشغيل
 radio_listen_moe_desc = موسيقى الأنمي والبوب الكوري، 24/7.
 radio_j1_desc = أحدث الأغاني الناجحة والأغاني الكلاسيكية من اليابان.
 radio_doujinstyle_desc = موسيقى الدوجين، الموسيقى التصويرية لألعاب الفيديو، والمزيد.
-radio_vocaloid_desc = أغاني فوكالอยد من اليابان. نحن نشغل كل شيء!
+radio_vocaloid_desc = أغاني فوكالويد من اليابان. نحن نشغل كل شيء!
 radio_live_stream = بث مباشر

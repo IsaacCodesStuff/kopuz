@@ -9,18 +9,25 @@ fn parse_track_update(d: &serde_json::Value) -> Option<RadioMetadata> {
     let title = song
         .get("title")
         .and_then(|v| v.as_str())
+        .filter(|s| !s.trim().is_empty())
         .unwrap_or("Unknown")
         .to_string();
 
     let artist = song
         .get("artists")
         .and_then(|v| v.as_array())
-        .map(|artists| {
-            artists
+        .and_then(|artists| {
+            let joined = artists
                 .iter()
                 .filter_map(|a| a.get("name").and_then(|n| n.as_str()))
+                .filter(|s| !s.trim().is_empty())
                 .collect::<Vec<_>>()
-                .join(", ")
+                .join(", ");
+            if joined.is_empty() {
+                None
+            } else {
+                Some(joined)
+            }
         })
         .unwrap_or_else(|| "Unknown Artist".to_string());
 

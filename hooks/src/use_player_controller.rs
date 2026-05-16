@@ -665,7 +665,13 @@ impl PlayerController {
                                                 "vocaloid" => {
                                                     Box::new(radio::vocaloid::VocaloidProvider)
                                                 }
-                                                _ => return,
+                                                _ => {
+                                                    tracing::warn!("[radio] No metadata provider for station: {}", station_id);
+                                                    is_loading.set(false);
+                                                    is_playing.set(true);
+                                                    skip_in_progress.set(false);
+                                                    return;
+                                                }
                                             };
 
                                         let task = spawn(async move {
@@ -988,6 +994,8 @@ impl PlayerController {
                             skip_in_progress.set(false);
 
                             if started {
+
+                            if !is_radio_item {
                                 let scrobble_track = track.clone();
                                 let scrobble_gen = current_gen;
                                 let scrobble_play_gen = play_generation;
@@ -1192,7 +1200,8 @@ impl PlayerController {
                                             }
                                         }
                                     }
-                                });
+                                    });
+                                }
                             }
                         } else {
                             is_loading.set(false);
