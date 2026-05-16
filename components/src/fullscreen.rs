@@ -6,6 +6,7 @@ use dioxus::prelude::*;
 use hooks::use_player_controller::{LoopMode, PlayerController};
 use player::player::Player;
 use reader::Library;
+use crate::shared::fmt_time;
 
 #[component]
 pub fn Fullscreen(
@@ -50,11 +51,6 @@ pub fn Fullscreen(
         }
     });
 
-    let format_time = |seconds: u64| {
-        let minutes = seconds / 60;
-        let seconds = seconds % 60;
-        format!("{}:{:02}", minutes, seconds)
-    };
     let format_queue_duration = |seconds: u64| {
         let hours = seconds / 3600;
         let minutes = (seconds % 3600) / 60;
@@ -355,7 +351,7 @@ pub fn Fullscreen(
                         style: "max-width: 420px;",
                         div {
                             class: "flex items-center gap-3",
-                            span { class: "text-xs text-white/70 font-mono", style: "width: 50px; text-align: left;", "{format_time(display_progress)}" }
+                            span { class: "text-xs text-white/70 font-mono", style: "width: 50px; text-align: left;", "{fmt_time(display_progress)}" }
                             div {
                                 class: "flex-1 cursor-pointer relative",
                                 style: "height: 20px;",
@@ -393,7 +389,7 @@ pub fn Fullscreen(
                                     }
                                 }
                             }
-                            span { class: "text-xs text-white/70 font-mono", style: "width: 50px; text-align: right;", "{format_time(*current_song_duration.read())}" }
+                            span { class: "text-xs text-white/70 font-mono", style: "width: 50px; text-align: right;", "{fmt_time(*current_song_duration.read())}" }
                         }
                     }
 
