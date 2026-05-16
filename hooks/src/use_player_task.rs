@@ -387,7 +387,7 @@ pub fn use_player_task(ctrl: PlayerController) {
                         let artist = ctrl.current_song_artist.read().clone();
                         let album = ctrl.current_song_album.read().clone();
                         let duration = *ctrl.current_song_duration.read();
-                        let progress = pos.as_secs();
+                        let progress = if duration == u64::MAX { 0 } else { pos.as_secs() };
                         let cover = ctrl.current_song_cover_url.read().clone();
 
                         let song_key = format!("{}|{}|{}", title, artist, album);
