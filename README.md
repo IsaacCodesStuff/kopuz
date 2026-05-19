@@ -11,7 +11,7 @@
     <img src="https://img.shields.io/badge/Discord-5865F2?style=flat&logo=discord&logoColor=white" alt="Discord">
   </a>
   <img src="https://img.shields.io/badge/Rust-000000?style=flat&logo=rust&logoColor=white" alt="Rust">
-  <img src="https://github.com/user-attachments/assets/35191932-553f-4f73-bbfc-b5136b193ccf" alt="Kopuz">
+  <img src="https://github.com/user-attachments/assets/2b12ec40-2fcb-45e9-969e-ef99b4654957"" alt="Kopuz">
 
 </div>
 
