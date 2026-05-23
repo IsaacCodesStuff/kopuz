@@ -38,6 +38,13 @@
   <content_rating type="oars-1.1" />
 
   <releases>
+    <release version="0.6.5" date="2026-05-23">
+      <description>
+        <p>
+          Bug fixes for linux, and now linux local side is way more better because we added limit to image sizes (since bigger = more computing = less performance) and if the image size is over the limit app lowers quality, a lot of server side bugs fixed and local too.
+        </p>
+      </description>
+    </release>
     <release version="0.6.0" date="2026-05-17">
       <description>
         <p>
