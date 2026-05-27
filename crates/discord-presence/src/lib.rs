@@ -51,12 +51,13 @@ impl Presence {
             Timestamps::new().start(start_time).end(end_time)
         };
 
-        let state = format!("by {artist}");
+        let state = format!("{artist}");
 
         let mut activity = activity::Activity::new()
             .name(artist)
             .details(title)
             .state(&state)
+            .status_display_type(activity::StatusDisplayType::State)
             .timestamps(timestamps)
             .activity_type(activity::ActivityType::Listening);
 
@@ -76,11 +77,12 @@ impl Presence {
         album: &str,
         cover_url: Option<&str>,
     ) -> Result<(), Box<dyn std::error::Error>> {
-        let state = format!("by {artist} • Paused");
+        let state = format!("{artist} • Paused");
         let mut activity = activity::Activity::new()
             .name(artist)
             .details(title)
             .state(&state)
+            .status_display_type(activity::StatusDisplayType::State)
             .activity_type(activity::ActivityType::Listening);
 
         if let Some(url) = cover_url {

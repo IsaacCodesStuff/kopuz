@@ -333,6 +333,8 @@ pub fn use_player_task(ctrl: PlayerController) {
                 let discord_enabled = false;
                 #[cfg(all(not(target_arch = "wasm32"), not(target_os = "android")))]
                 let discord_enabled = config.read().discord_presence.unwrap_or(true);
+                #[cfg(not(target_arch = "wasm32"))]
+                let discord_paused_enabled = config.read().discord_presence_paused.unwrap_or(true);
                 let pos = ctrl.player.read().get_position();
                 let mut defer_player_progress = false;
 
@@ -625,10 +627,10 @@ pub fn use_player_task(ctrl: PlayerController) {
                             let title = ctrl.current_song_title.read().clone();
                             let artist = ctrl.current_song_artist.read().clone();
                             let album = ctrl.current_song_album.read().clone();
-                            if discord_enabled {
+                            if discord_enabled && discord_paused_enabled {
                                 let resolved = discord_cover_url.read().clone();
                                 let _ = p.set_paused(&title, &artist, &album, resolved.as_deref());
-                            } else if last_discord_enabled {
+                            } else if last_discord_enabled || !discord_paused_enabled {
                                 let _ = p.clear_activity();
                             }
                         }
