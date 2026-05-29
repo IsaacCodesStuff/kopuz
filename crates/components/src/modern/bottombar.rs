@@ -341,6 +341,20 @@ pub fn BottombarModern(
                 }
                 button {
                     class: "w-7 h-7 flex items-center justify-center text-slate-500 hover:text-white transition-colors",
+                    title: i18n::t("share_musicbrainz").to_string(),
+                    onclick: move |_| {
+                        if let Some(t) = ctrl.current_track_snapshot.read().clone() {
+                            crate::track_row::share_to_musicbrainz(
+                                t.musicbrainz_release_id,
+                                t.artist,
+                                t.title,
+                            );
+                        }
+                    },
+                    i { class: "fa-solid fa-share-nodes text-[10px]" }
+                }
+                button {
+                    class: "w-7 h-7 flex items-center justify-center text-slate-500 hover:text-white transition-colors",
                     onclick: move |_| is_fullscreen.set(true),
                     i { class: "fa-solid fa-up-right-and-down-left-from-center text-[10px]" }
                 }

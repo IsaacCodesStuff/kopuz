@@ -328,6 +328,20 @@ pub fn BottombarNormal(
                 }
                 button {
                     class: "text-slate-400 hover:text-white",
+                    title: i18n::t("share_musicbrainz").to_string(),
+                    onclick: move |_| {
+                        if let Some(t) = ctrl.current_track_snapshot.read().clone() {
+                            crate::track_row::share_to_musicbrainz(
+                                t.musicbrainz_release_id,
+                                t.artist,
+                                t.title,
+                            );
+                        }
+                    },
+                    i { class: "fa-solid fa-share-nodes text-xs" }
+                }
+                button {
+                    class: "text-slate-400 hover:text-white",
                     onclick: move |_| is_fullscreen.set(true),
                     i { class: "fa-solid fa-up-right-and-down-left-from-center text-xs" }
                 }

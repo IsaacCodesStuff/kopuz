@@ -1,14 +1,33 @@
-use crate::NavigationController;
 use crate::constants::*;
 use crate::dots_menu::{DotsMenu, MenuAction};
 use crate::queue_drag::{
     clear_dragged_queue_track, handle_select_click, is_queue_drag_enabled, set_dragged_queue_track,
     set_dragged_queue_tracks,
 };
+use crate::NavigationController;
 use config::{AppConfig, UiStyle};
 use dioxus::prelude::*;
 use hooks::PlayerController;
 use reader::models::Track;
+use config::MusicSource;
+
+pub(crate) fn copy_to_clipboard(text: &str) {
+    let value = serde_json::to_string(text).unwrap_or_else(|_| "\"\"".to_string());
+    let js = format!(
+        "navigator.clipboard.writeText({value}).catch((e) => console.error('clipboard writeText failed', e));"
+    );
+    let _ = dioxus::document::eval(&js);
+}
+
+pub(crate) fn share_to_musicbrainz(release_id: Option<String>, artist: String, title: String) {
+    spawn(async move {
+        if let Some(url) =
+            utils::musicbrainz::track_page_url(release_id.as_deref(), &artist, &title).await
+        {
+            copy_to_clipboard(&url);
+        }
+    });
+}
 
 #[component]
 pub fn TrackRow(
@@ -61,6 +80,16 @@ pub fn TrackRow(
     let add_to_playlist_text = i18n::t("add_to_playlist").to_string();
     let remove_from_playlist_text = i18n::t("remove_from_playlist").to_string();
     let delete_song_text = i18n::t("delete").to_string();
+    let share_text = i18n::t("share_musicbrainz").to_string();
+
+    // Identifiers used to resolve the track's MusicBrainz page when sharing.
+    // Cloned once per layout closure (modern / normal) since each moves them in.
+    let share_modern = (
+        track.musicbrainz_release_id.clone(),
+        track.artist.clone(),
+        track.title.clone(),
+    );
+    let share_normal = share_modern.clone();
 
     let mut actions = Vec::new();
 
@@ -90,6 +119,9 @@ pub fn TrackRow(
     }
 
     let has_download = on_download.is_some();
+    let is_server = config.read().active_source == MusicSource::Server;
+    let has_download = has_download && is_server;
+
     if has_download {
         let (dl_label, dl_icon) = if is_downloading {
             ("Downloading...", "fa-solid fa-spinner fa-spin")
@@ -108,6 +140,12 @@ pub fn TrackRow(
     if !hide_delete {
         actions.push(MenuAction::new(delete_song_text.as_str(), "fa-solid fa-trash").destructive());
     }
+
+    let share_idx = actions.len();
+    actions.push(MenuAction::new(
+        share_text.as_str(),
+        "fa-solid fa-share-nodes",
+    ));
 
     let play_next_idx = if has_queue { Some(0) } else { None };
     let add_to_queue_idx = if has_queue { Some(1) } else { None };
@@ -393,6 +431,10 @@ pub fn TrackRow(
                                     if let Some(handler) = on_remove_from_playlist { handler.call(()); }
                                 } else if has_download && idx == download_action_idx {
                                     if let Some(handler) = on_download { handler.call(()); }
+                                } else if idx == share_idx {
+                                    let (rid, artist, title) = share_modern.clone();
+                                    share_to_musicbrainz(rid, artist, title);
+                                    on_close_menu.call(());
                                 } else if idx == delete_action_idx {
                                     on_delete.call(());
                                 }
@@ -409,7 +451,11 @@ pub fn TrackRow(
     } else {
         COLUMNS_NORMAL
     };
-    let column_gap = if cfg!(target_os = "android") { "0.5rem" } else { "1.5rem" };
+    let column_gap = if cfg!(target_os = "android") {
+        "0.5rem"
+    } else {
+        "1.5rem"
+    };
 
     // normal UI
     return rsx! {
@@ -645,6 +691,10 @@ pub fn TrackRow(
                                 if let Some(handler) = on_download {
                                     handler.call(());
                                 }
+                            } else if idx == share_idx {
+                                let (rid, artist, title) = share_normal.clone();
+                                share_to_musicbrainz(rid, artist, title);
+                                on_close_menu.call(());
                             } else if idx == delete_action_idx {
                                 on_delete.call(());
                             }
