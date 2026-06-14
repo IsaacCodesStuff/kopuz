@@ -21,6 +21,7 @@ pub fn AddServerPopup(
         MusicService::Subsonic => "subsonic",
         MusicService::Custom => "custom",
         MusicService::YtMusic => "ytmusic",
+        MusicService::SoundCloud => "soundcloud",
     };
 
     let server_name_optional = i18n::t("server_name_optional").to_string();
@@ -65,6 +66,7 @@ pub fn AddServerPopup(
                             "subsonic" => MusicService::Subsonic,
                             "custom" => MusicService::Custom,
                             "ytmusic" => MusicService::YtMusic,
+                            "soundcloud" => MusicService::SoundCloud,
                             _ => MusicService::Jellyfin,
                         };
                         server_service.set(service);
@@ -89,6 +91,11 @@ pub fn AddServerPopup(
                         value: "ytmusic",
                         selected: server_service() == MusicService::YtMusic,
                         "YouTube Music"
+                    }
+                    option {
+                        value: "soundcloud",
+                        selected: server_service() == MusicService::SoundCloud,
+                        "SoundCloud"
                     }
                 }
 
@@ -301,6 +308,11 @@ fn ServerServiceFields(
                 }
             }
         }
+        MusicService::SoundCloud => rsx! {
+            p { class: "text-xs text-white/60",
+                "kopuz streams SoundCloud's public catalog — no sign-in needed. Search and play full tracks right away. Library, playlists, and likes aren't available."
+            }
+        },
         _ => rsx! {
             input {
                 placeholder: "{server_url_placeholder}",

@@ -157,6 +157,7 @@ pub enum MusicService {
     Subsonic,
     Custom,
     YtMusic,
+    SoundCloud,
 }
 
 impl MusicService {
@@ -166,7 +167,15 @@ impl MusicService {
             Self::Subsonic => "Subsonic",
             Self::Custom => "Custom",
             Self::YtMusic => "YouTube Music",
+            Self::SoundCloud => "SoundCloud",
         }
+    }
+
+    /// Backends that authenticate with no server URL and no username/password
+    /// (YT Music anonymous, SoundCloud). Adding one of these marks the server
+    /// immediately active/playable instead of opening a login form.
+    pub fn is_tokenless(&self) -> bool {
+        matches!(self, Self::YtMusic | Self::SoundCloud)
     }
 }
 

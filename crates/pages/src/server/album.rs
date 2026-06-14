@@ -958,7 +958,7 @@ pub fn ServerAlbum(
                 pending_album_id_for_playlist,
             }
         },
-        MusicService::Custom | MusicService::YtMusic => rsx! {
+        MusicService::Custom | MusicService::YtMusic | MusicService::SoundCloud => rsx! {
             CustomAlbum {
                 library,
                 config,
@@ -1058,7 +1058,7 @@ pub fn ServerAlbumDetails(
                 on_close,
             }
         },
-        MusicService::Custom | MusicService::YtMusic => rsx! {
+        MusicService::Custom | MusicService::YtMusic | MusicService::SoundCloud => rsx! {
             CustomAlbumDetails {
                 album_jellyfin_id,
                 library,

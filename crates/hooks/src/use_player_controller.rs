@@ -159,9 +159,9 @@ impl PlayerController {
                     )
                 })
                 .unwrap_or_default(),
-            "ytmusic" => {
-                // YT tracks carry their thumbnail in album_id as
-                // `ytmusic:_:urlhex_HEX`. Pass empty server_url so
+            "ytmusic" | "soundcloud" => {
+                // YT/SoundCloud tracks carry their thumbnail in album_id as
+                // `<src>:_:urlhex_HEX`. Pass empty server_url so
                 // `track_cover_url_with_album_fallback` skips its
                 // jellyfin-URL fallback path and only returns the
                 // embedded URL via decode_embedded_cover_url.
@@ -428,7 +428,7 @@ impl PlayerController {
             let is_radio_item = scheme.as_str() == "radio";
             let is_server_item = matches!(
                 scheme.as_str(),
-                "jellyfin" | "subsonic" | "custom" | "ytmusic"
+                "jellyfin" | "subsonic" | "custom" | "ytmusic" | "soundcloud"
             );
 
             if is_server_item || is_radio_item {
@@ -631,6 +631,19 @@ impl PlayerController {
                                     .unwrap_or_default();
                                 (format!("__YT_PENDING:{id}"), cover_url)
                             }
+                            MusicService::SoundCloud => {
+                                let cover_url =
+                                    utils::jellyfin_image::track_cover_url_with_album_fallback(
+                                        &path_str,
+                                        &track.album_id,
+                                        "",
+                                        None,
+                                        800,
+                                        90,
+                                    )
+                                    .unwrap_or_default();
+                                (format!("__SC_PENDING:{id}"), cover_url)
+                            }
                         })
                     }
                 } {
@@ -747,6 +760,22 @@ impl PlayerController {
                                     tracing::error!(error = %e, "YT Music stream URL fetch failed");
                                     playback_error.set(Some(format!(
                                         "YouTube Music couldn't load this track:\n{e}"
+                                    )));
+                                    is_loading.set(false);
+                                    skip_in_progress.set(false);
+                                    return;
+                                }
+                            }
+                        } else if let Some(track_id) = stream_url.strip_prefix("__SC_PENDING:") {
+                            match ::server::soundcloud::resolve_stream(track_id).await {
+                                Ok(url) => (url, None, None),
+                                Err(e) => {
+                                    if *play_generation.read() != current_gen {
+                                        return;
+                                    }
+                                    tracing::error!(error = %e, "SoundCloud stream URL fetch failed");
+                                    playback_error.set(Some(format!(
+                                        "SoundCloud couldn't load this track:\n{e}"
                                     )));
                                     is_loading.set(false);
                                     skip_in_progress.set(false);

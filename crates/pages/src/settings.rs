@@ -303,8 +303,9 @@ pub fn Settings(config: Signal<AppConfig>) -> Element {
     let handle_add_server = move |_| {
         let selected_service = server_service();
         let is_ytmusic = selected_service == MusicService::YtMusic;
+        let is_soundcloud = selected_service == MusicService::SoundCloud;
 
-        if !is_ytmusic && !server_url().starts_with("http") {
+        if !is_ytmusic && !is_soundcloud && !server_url().starts_with("http") {
             error.set(Some(i18n::t("invalid_server_url").to_string()));
             return;
         }
@@ -325,6 +326,8 @@ pub fn Settings(config: Signal<AppConfig>) -> Element {
 
                 let effective_url = if is_ytmusic {
                     "https://music.youtube.com".to_string()
+                } else if is_soundcloud {
+                    "https://soundcloud.com".to_string()
                 } else {
                     url_input
                 };
@@ -336,11 +339,11 @@ pub fn Settings(config: Signal<AppConfig>) -> Element {
                 );
                 let is_anon = is_ytmusic && *yt_anonymous.peek();
                 new_server.yt_anonymous = is_anon;
-                if is_anon {
-                    // Mark anonymous mode at the server level. Empty access
-                    // token + yt_anonymous=true is what get_stream /
-                    // discover etc. read as "no cookies, public surfaces
-                    // only".
+                if is_anon || is_soundcloud {
+                    // Mark the server active with an empty (non-None) access
+                    // token. For anonymous YT that's the "no cookies, public
+                    // surfaces only" signal get_stream/discover read; for
+                    // SoundCloud it just means "tokenless, ready to play".
                     new_server.access_token = Some(String::new());
                 }
                 // Persist the chosen browser on the active server too (not just the
@@ -369,11 +372,11 @@ pub fn Settings(config: Signal<AppConfig>) -> Element {
 
                 if is_ytmusic && !is_anon {
                     ytmusic_auto_login();
-                } else if !is_ytmusic {
+                } else if !is_ytmusic && !is_soundcloud {
                     show_login.set(true);
                 }
-                // Anonymous YT needs no further setup — the server entry
-                // is already active and playable.
+                // Anonymous YT and SoundCloud need no further setup — the
+                // server entry is already active and playable.
             }
             .instrument(tracing::info_span!("yt.anon_setup")),
         );
@@ -386,14 +389,16 @@ pub fn Settings(config: Signal<AppConfig>) -> Element {
         };
         if let Some(saved) = server {
             let is_ytmusic = saved.service == MusicService::YtMusic;
+            let is_soundcloud = saved.service == MusicService::SoundCloud;
             let is_anon = is_ytmusic && saved.yt_anonymous;
             let active = config::MusicServer {
                 name: saved.name,
                 url: saved.url,
                 service: saved.service,
-                // Anonymous YT keeps an empty (non-None) token so the
-                // backend treats it as anon rather than "needs sign-in".
-                access_token: is_anon.then(String::new),
+                // An empty (non-None) token marks the server active without a
+                // sign-in: anonymous YT (treated as "no cookies") and the
+                // tokenless SoundCloud backend.
+                access_token: (is_anon || is_soundcloud).then(String::new),
                 user_id: None,
                 id: Some(saved.id),
                 // Carry the saved browser choice over so the sign-in
@@ -405,10 +410,10 @@ pub fn Settings(config: Signal<AppConfig>) -> Element {
             config.write().server = Some(active);
             if is_ytmusic && !is_anon {
                 ytmusic_auto_login();
-            } else if !is_ytmusic {
+            } else if !is_ytmusic && !is_soundcloud {
                 show_login.set(true);
             }
-            // Anonymous YT is immediately active — no sign-in launch.
+            // Anonymous YT and SoundCloud are immediately active — no sign-in.
         }
     };
 

@@ -32,7 +32,9 @@ impl ServerConn {
         let server = config.server.as_ref()?;
         let token = server.access_token.clone()?;
         let user_id = match server.service {
-            MusicService::YtMusic => server.user_id.clone().unwrap_or_default(),
+            MusicService::YtMusic | MusicService::SoundCloud => {
+                server.user_id.clone().unwrap_or_default()
+            }
             _ => server.user_id.clone()?,
         };
         Some(Self {
@@ -95,6 +97,7 @@ pub async fn add_tracks_to_playlist(
                 }
             }
         }
+        MusicService::SoundCloud => {}
     }
     added
 }
@@ -128,6 +131,9 @@ pub async fn create_server_playlist(
         MusicService::YtMusic => {
             let yt = YouTubeMusicClient::with_cookies(conn.token.clone());
             yt.create_playlist(name, "", &id_refs).await
+        }
+        MusicService::SoundCloud => {
+            Err("SoundCloud doesn't support server playlists".to_string())
         }
     }
 }
@@ -190,6 +196,9 @@ pub async fn set_tracks_favorite(
                     record!(yt.unlike_video(id).await);
                 }
             }
+        }
+        MusicService::SoundCloud => {
+            return Err("SoundCloud doesn't support favorites".to_string());
         }
     }
     match first_err {

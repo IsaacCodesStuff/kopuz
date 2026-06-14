@@ -284,6 +284,7 @@ pub fn JellyfinPlaylists(
                     yt_synced_so_far.set(total);
                     return;
                 }
+                MusicService::SoundCloud => {}
             }
 
             if *fetch_request_id.read() != request_id {

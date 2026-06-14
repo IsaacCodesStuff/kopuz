@@ -244,6 +244,7 @@ pub fn PlaylistDetail(
                                         has_loaded_jellyfin_tracks.set(true);
                                     }
                                 }
+                                MusicService::SoundCloud => {}
                             }
                         }
                     }
@@ -484,6 +485,7 @@ pub fn PlaylistDetail(
                                             .await
                                             .is_ok()
                                     }
+                                    MusicService::SoundCloud => false,
                                 };
                                 if removed && remove_idx < tracks.read().len() {
                                     tracks.write().remove(remove_idx);
@@ -530,7 +532,7 @@ pub fn PlaylistDetail(
                             let moved_item =
                                 track_list.get(idx - 1).and_then(|t| t.playlist_item_id.clone());
                             match service {
-                                MusicService::YtMusic => {}
+                                MusicService::YtMusic | MusicService::SoundCloud => {}
                                 MusicService::Jellyfin => {
                                     if let Some(item_id) = moved_item {
                                         let remote = server::jellyfin::JellyfinClient::new(
@@ -610,7 +612,7 @@ pub fn PlaylistDetail(
                             let moved_item =
                                 track_list.get(idx + 1).and_then(|t| t.playlist_item_id.clone());
                             match service {
-                                MusicService::YtMusic => {}
+                                MusicService::YtMusic | MusicService::SoundCloud => {}
                                 MusicService::Jellyfin => {
                                     if let Some(item_id) = moved_item {
                                         let remote = server::jellyfin::JellyfinClient::new(

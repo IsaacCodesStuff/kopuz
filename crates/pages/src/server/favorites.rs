@@ -159,6 +159,7 @@ pub fn JellyfinFavorites(
                             }
                         }
                     }
+                    MusicService::SoundCloud => Vec::new(),
                 };
 
                 favorites_store.write().jellyfin_favorites = ids;
