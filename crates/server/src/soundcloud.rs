@@ -513,8 +513,13 @@ pub async fn stream_liked_tracks<F: FnMut(Vec<Track>)>(
 pub async fn list_playlists(token: &str) -> Result<Vec<PlaylistSummary>, String> {
     let http = http_client();
     let cid = client_id(&http, false).await?;
+    // `/me/playlists` 404s like `/me/likes/tracks`; the web player reads a
+    // user's playlists from `/users/{id}/playlists`.
+    let uid = derive_user_id(token)
+        .await
+        .ok_or("SoundCloud: couldn't resolve the signed-in user id")?;
     let mut next = Some(format!(
-        "{API_V2}/me/playlists?client_id={cid}&limit=50&linked_partitioning=1"
+        "{API_V2}/users/{uid}/playlists?client_id={cid}&limit=50&linked_partitioning=1"
     ));
     let mut out = Vec::new();
     let mut pages = 0;

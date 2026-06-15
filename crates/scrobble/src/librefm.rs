@@ -74,7 +74,7 @@ fn make_api_sig(params: &[(&str, &str)], api_secret: &str) -> String {
 }
 
 pub async fn get_auth_token(api_key: &str) -> Result<String, reqwest::Error> {
-    let client = Client::new();
+    let client = client();
 
     let resp = client
         .get(API_URL)
@@ -98,7 +98,7 @@ pub async fn get_session_key(
     api_secret: &str,
     token: &str,
 ) -> Result<String, reqwest::Error> {
-    let client = Client::new();
+    let client = client();
 
     let params = [
         ("api_key", api_key),
@@ -133,7 +133,7 @@ pub async fn submit_scrobble(
     session_key: &str,
     scrobble: &Scrobble<'_>,
 ) -> Result<String, reqwest::Error> {
-    let client = Client::new();
+    let client = client();
 
     let artist = scrobble.track_metadata.artist_name.trim();
     let track = scrobble.track_metadata.track_name.trim();
@@ -179,7 +179,7 @@ pub async fn submit_now_playing(
     session_key: &str,
     now_playing: &NowPlaying<'_>,
 ) -> Result<String, reqwest::Error> {
-    let client = Client::new();
+    let client = client();
 
     let artist = now_playing.track_metadata.artist_name.trim();
     let track = now_playing.track_metadata.track_name.trim();
