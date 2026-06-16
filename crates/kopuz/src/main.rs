@@ -114,8 +114,6 @@ fn build_window_icon() -> Option<Icon> {
     Icon::from_rgba(image.into_raw(), width, height).ok()
 }
 
-// Same source image as the window icon, but the tray expects a
-// `tray_icon::Icon` (distinct type from tao's `Icon`).
 #[cfg(all(not(target_arch = "wasm32"), not(target_os = "android")))]
 fn build_tray_icon() -> Option<dioxus::desktop::trayicon::Icon> {
     let image = image::load_from_memory(include_bytes!("../assets/logo-512.png")).ok()?;
@@ -503,6 +501,190 @@ fn make_hq_image(raw: &[u8], cache_path: &std::path::Path) -> Option<Vec<u8>> {
     Some(out)
 }
 
+#[cfg(all(not(target_arch = "wasm32"), not(target_os = "android")))]
+fn serve_artwork(uri: http::Uri, responder: RequestAsyncResponder) {
+    tokio::spawn(
+        async move {
+            let query = uri.query().unwrap_or_default();
+            let file_path: String = query
+                .split('&')
+                .find_map(|kv| kv.strip_prefix("p="))
+                .map(|encoded| {
+                    percent_encoding::percent_decode_str(encoded)
+                        .decode_utf8_lossy()
+                        .into_owned()
+                })
+                .unwrap_or_default();
+            let high_quality = query.split('&').any(|kv| kv == "hq=1");
+
+            if file_path.is_empty() {
+                responder.respond(
+                    http::Response::builder()
+                        .status(400)
+                        .body(std::borrow::Cow::from(Vec::new()))
+                        .unwrap(),
+                );
+                return;
+            }
+
+            #[cfg(target_os = "windows")]
+            let file_path = file_path.replace('/', "\\");
+
+            #[cfg(not(target_os = "windows"))]
+            let file_path = if file_path.starts_with('~') {
+                if let Ok(home) = std::env::var("HOME") {
+                    file_path.replacen('~', &home, 1)
+                } else {
+                    file_path
+                }
+            } else {
+                file_path
+            };
+
+            if high_quality {
+                let hq_path = hq_cache_path(&file_path);
+                if hq_path.exists()
+                    && let Ok(b) = tokio::fs::read(&hq_path).await
+                {
+                    responder.respond(
+                        http::Response::builder()
+                            .header("Content-Type", "image/jpeg")
+                            .header("Access-Control-Allow-Origin", "*")
+                            .header("Cache-Control", "public, max-age=31536000")
+                            .body(std::borrow::Cow::from(b))
+                            .unwrap(),
+                    );
+                    return;
+                }
+                match tokio::fs::read(&file_path).await {
+                    Ok(raw) => {
+                        let file_path_clone = file_path.clone();
+                        let result = tokio::task::spawn_blocking(move || {
+                            make_hq_image(&raw, &hq_path)
+                                .map(|b| (b, "image/jpeg"))
+                                .unwrap_or_else(|| {
+                                    let mime = if file_path_clone.ends_with(".png") {
+                                        "image/png"
+                                    } else {
+                                        "image/jpeg"
+                                    };
+                                    (raw, mime)
+                                })
+                        })
+                        .await;
+                        match result {
+                            Ok((bytes, mime)) => responder.respond(
+                                http::Response::builder()
+                                    .header("Content-Type", mime)
+                                    .header("Access-Control-Allow-Origin", "*")
+                                    .header("Cache-Control", "public, max-age=31536000")
+                                    .body(std::borrow::Cow::from(bytes))
+                                    .unwrap(),
+                            ),
+                            Err(_) => responder.respond(
+                                http::Response::builder()
+                                    .status(500)
+                                    .body(std::borrow::Cow::from(Vec::new()))
+                                    .unwrap(),
+                            ),
+                        }
+                    }
+                    Err(_) => responder.respond(
+                        http::Response::builder()
+                            .status(404)
+                            .body(std::borrow::Cow::from(Vec::new()))
+                            .unwrap(),
+                    ),
+                }
+                return;
+            }
+
+            let thumb_path = thumb_cache_path(&file_path);
+
+            let (bytes, mime) = if thumb_path.exists() {
+                match tokio::fs::read(&thumb_path).await {
+                    Ok(b) => (b, "image/jpeg"),
+                    Err(_) => {
+                        let _ = std::fs::remove_file(&thumb_path);
+                        match tokio::fs::read(&file_path).await {
+                            Ok(b) => (
+                                b,
+                                if file_path.ends_with(".png") {
+                                    "image/png"
+                                } else {
+                                    "image/jpeg"
+                                },
+                            ),
+                            Err(_) => {
+                                responder.respond(
+                                    http::Response::builder()
+                                        .status(404)
+                                        .body(std::borrow::Cow::from(Vec::new()))
+                                        .unwrap(),
+                                );
+                                return;
+                            }
+                        }
+                    }
+                }
+            } else {
+                match tokio::fs::read(&file_path).await {
+                    Ok(raw) => {
+                        let thumb_path_clone = thumb_path.clone();
+                        match tokio::task::spawn_blocking(move || {
+                            match make_thumbnail(&raw, &thumb_path_clone) {
+                                Some(b) => Ok(b),
+                                None => Err(raw),
+                            }
+                        })
+                        .await
+                        {
+                            Ok(Ok(b)) => (b, "image/jpeg"),
+                            Ok(Err(raw)) => (
+                                raw,
+                                if file_path.ends_with(".png") {
+                                    "image/png"
+                                } else {
+                                    "image/jpeg"
+                                },
+                            ),
+                            Err(_) => {
+                                responder.respond(
+                                    http::Response::builder()
+                                        .status(500)
+                                        .body(std::borrow::Cow::from(Vec::new()))
+                                        .unwrap(),
+                                );
+                                return;
+                            }
+                        }
+                    }
+                    Err(e) => {
+                        tracing::warn!("[artwork] not found {}: {}", file_path, e);
+                        responder.respond(
+                            http::Response::builder()
+                                .status(404)
+                                .body(std::borrow::Cow::from(Vec::new()))
+                                .unwrap(),
+                        );
+                        return;
+                    }
+                }
+            };
+
+            responder.respond(
+                http::Response::builder()
+                    .header("Content-Type", mime)
+                    .header("Access-Control-Allow-Origin", "*")
+                    .header("Cache-Control", "public, max-age=31536000")
+                    .body(std::borrow::Cow::from(bytes))
+                    .unwrap(),
+            );
+        }
+        .instrument(tracing::info_span!("artwork.serve")),
+    );
+}
+
 fn main() {
     #[cfg(all(not(target_arch = "wasm32"), not(target_os = "android")))]
     {
@@ -590,192 +772,7 @@ fn main() {
             .with_asynchronous_custom_protocol(
                 "artwork",
                 |_id, request, responder: RequestAsyncResponder| {
-                    let uri = request.uri().clone();
-
-                    tokio::spawn(
-                        async move {
-                            let query = uri.query().unwrap_or_default();
-                            let file_path: String = query
-                                .split('&')
-                                .find_map(|kv| kv.strip_prefix("p="))
-                                .map(|encoded| {
-                                    percent_encoding::percent_decode_str(encoded)
-                                        .decode_utf8_lossy()
-                                        .into_owned()
-                                })
-                                .unwrap_or_default();
-                            let high_quality = query.split('&').any(|kv| kv == "hq=1");
-
-                            if file_path.is_empty() {
-                                responder.respond(
-                                    http::Response::builder()
-                                        .status(400)
-                                        .body(std::borrow::Cow::from(Vec::new()))
-                                        .unwrap(),
-                                );
-                                return;
-                            }
-
-                            #[cfg(target_os = "windows")]
-                            let file_path = file_path.replace('/', "\\");
-
-                            #[cfg(not(target_os = "windows"))]
-                            let file_path = if file_path.starts_with('~') {
-                                if let Ok(home) = std::env::var("HOME") {
-                                    file_path.replacen('~', &home, 1)
-                                } else {
-                                    file_path
-                                }
-                            } else {
-                                file_path
-                            };
-
-                            if high_quality {
-                                let hq_path = hq_cache_path(&file_path);
-                                if hq_path.exists()
-                                    && let Ok(b) = tokio::fs::read(&hq_path).await
-                                {
-                                    responder.respond(
-                                        http::Response::builder()
-                                            .header("Content-Type", "image/jpeg")
-                                            .header("Access-Control-Allow-Origin", "*")
-                                            .header("Cache-Control", "public, max-age=31536000")
-                                            .body(std::borrow::Cow::from(b))
-                                            .unwrap(),
-                                    );
-                                    return;
-                                }
-                                match tokio::fs::read(&file_path).await {
-                                    Ok(raw) => {
-                                        let file_path_clone = file_path.clone();
-                                        let result = tokio::task::spawn_blocking(move || {
-                                            make_hq_image(&raw, &hq_path)
-                                                .map(|b| (b, "image/jpeg"))
-                                                .unwrap_or_else(|| {
-                                                    let mime = if file_path_clone.ends_with(".png")
-                                                    {
-                                                        "image/png"
-                                                    } else {
-                                                        "image/jpeg"
-                                                    };
-                                                    (raw, mime)
-                                                })
-                                        })
-                                        .await;
-                                        match result {
-                                            Ok((bytes, mime)) => responder.respond(
-                                                http::Response::builder()
-                                                    .header("Content-Type", mime)
-                                                    .header("Access-Control-Allow-Origin", "*")
-                                                    .header(
-                                                        "Cache-Control",
-                                                        "public, max-age=31536000",
-                                                    )
-                                                    .body(std::borrow::Cow::from(bytes))
-                                                    .unwrap(),
-                                            ),
-                                            Err(_) => responder.respond(
-                                                http::Response::builder()
-                                                    .status(500)
-                                                    .body(std::borrow::Cow::from(Vec::new()))
-                                                    .unwrap(),
-                                            ),
-                                        }
-                                    }
-                                    Err(_) => responder.respond(
-                                        http::Response::builder()
-                                            .status(404)
-                                            .body(std::borrow::Cow::from(Vec::new()))
-                                            .unwrap(),
-                                    ),
-                                }
-                                return;
-                            }
-
-                            let thumb_path = thumb_cache_path(&file_path);
-
-                            let (bytes, mime) = if thumb_path.exists() {
-                                match tokio::fs::read(&thumb_path).await {
-                                    Ok(b) => (b, "image/jpeg"),
-                                    Err(_) => {
-                                        let _ = std::fs::remove_file(&thumb_path);
-                                        match tokio::fs::read(&file_path).await {
-                                            Ok(b) => (
-                                                b,
-                                                if file_path.ends_with(".png") {
-                                                    "image/png"
-                                                } else {
-                                                    "image/jpeg"
-                                                },
-                                            ),
-                                            Err(_) => {
-                                                responder.respond(
-                                                    http::Response::builder()
-                                                        .status(404)
-                                                        .body(std::borrow::Cow::from(Vec::new()))
-                                                        .unwrap(),
-                                                );
-                                                return;
-                                            }
-                                        }
-                                    }
-                                }
-                            } else {
-                                match tokio::fs::read(&file_path).await {
-                                    Ok(raw) => {
-                                        let thumb_path_clone = thumb_path.clone();
-                                        match tokio::task::spawn_blocking(move || {
-                                            match make_thumbnail(&raw, &thumb_path_clone) {
-                                                Some(b) => Ok(b),
-                                                None => Err(raw),
-                                            }
-                                        })
-                                        .await
-                                        {
-                                            Ok(Ok(b)) => (b, "image/jpeg"),
-                                            Ok(Err(raw)) => (
-                                                raw,
-                                                if file_path.ends_with(".png") {
-                                                    "image/png"
-                                                } else {
-                                                    "image/jpeg"
-                                                },
-                                            ),
-                                            Err(_) => {
-                                                responder.respond(
-                                                    http::Response::builder()
-                                                        .status(500)
-                                                        .body(std::borrow::Cow::from(Vec::new()))
-                                                        .unwrap(),
-                                                );
-                                                return;
-                                            }
-                                        }
-                                    }
-                                    Err(e) => {
-                                        tracing::warn!("[artwork] not found {}: {}", file_path, e);
-                                        responder.respond(
-                                            http::Response::builder()
-                                                .status(404)
-                                                .body(std::borrow::Cow::from(Vec::new()))
-                                                .unwrap(),
-                                        );
-                                        return;
-                                    }
-                                }
-                            };
-
-                            responder.respond(
-                                http::Response::builder()
-                                    .header("Content-Type", mime)
-                                    .header("Access-Control-Allow-Origin", "*")
-                                    .header("Cache-Control", "public, max-age=31536000")
-                                    .body(std::borrow::Cow::from(bytes))
-                                    .unwrap(),
-                            );
-                        }
-                        .instrument(tracing::info_span!("artwork.serve")),
-                    );
+                    serve_artwork(request.uri().clone(), responder);
                 },
             );
 
@@ -1375,24 +1372,16 @@ fn App() -> Element {
         windows_titlebar::set_custom_titlebar_enabled(mode == config::TitlebarMode::Custom);
     });
 
-    // System tray (desktop only). The whole feature is opt-in: the icon only
-    // exists while `minimize_to_tray` is enabled, and dropping the TrayIcon
-    // removes it from the tray. The menu handler is registered once (it only
-    // ever fires while a tray exists) and the close-behavior follows the same
-    // setting, so toggling it in Settings takes effect without a restart.
+    // System tray (desktop only). When `minimize_to_tray` is on, closing the
+    // window hides it instead of quitting and a tray icon is shown; clicking the
+    // tray icon restores the window (handled by dioxus's built-in tray handler).
     #[cfg(all(not(target_arch = "wasm32"), not(target_os = "android")))]
     {
         use dioxus::desktop::trayicon::TrayIcon;
-        use dioxus::desktop::trayicon::menu::{Menu, MenuItem};
-        use dioxus::desktop::{
-            WindowCloseBehaviour, use_tray_menu_event_handler, window,
-        };
+        use dioxus::desktop::{WindowCloseBehaviour, window};
         use std::cell::RefCell;
         use std::rc::Rc;
 
-        // TrayIcon isn't `Send`, so it lives in a non-reactive Rc slot rather
-        // than a Signal. The effect creates it on enable and drops it on
-        // disable.
         let tray_slot: Rc<RefCell<Option<TrayIcon>>> = use_hook(|| Rc::new(RefCell::new(None)));
 
         use_effect({
@@ -1400,8 +1389,7 @@ fn App() -> Element {
             move || {
                 use dioxus::desktop::trayicon::TrayIconBuilder;
                 let enabled = config.read().minimize_to_tray;
-                let win = window();
-                win.set_close_behavior(if enabled {
+                window().set_close_behavior(if enabled {
                     WindowCloseBehaviour::WindowHides
                 } else {
                     WindowCloseBehaviour::WindowCloses
@@ -1410,23 +1398,7 @@ fn App() -> Element {
                 let mut slot = tray_slot.borrow_mut();
                 match (enabled, slot.is_some()) {
                     (true, false) => {
-                        let menu = Menu::new();
-                        let _ = menu.append_items(&[
-                            &MenuItem::with_id("tray_show", i18n::t("show_window"), true, None),
-                            &MenuItem::with_id(
-                                "tray_playpause",
-                                i18n::t("play_pause"),
-                                true,
-                                None,
-                            ),
-                            &MenuItem::with_id("tray_next", i18n::t("next"), true, None),
-                            &MenuItem::with_id("tray_prev", i18n::t("previous"), true, None),
-                            &MenuItem::with_id("tray_quit", i18n::t("quit"), true, None),
-                        ]);
-                        let mut builder = TrayIconBuilder::new()
-                            .with_tooltip("Kopuz")
-                            .with_menu(Box::new(menu))
-                            .with_menu_on_left_click(false);
+                        let mut builder = TrayIconBuilder::new().with_tooltip("Kopuz");
                         if let Some(icon) = build_tray_icon() {
                             builder = builder.with_icon(icon);
                         }
@@ -1435,29 +1407,9 @@ fn App() -> Element {
                             Err(e) => tracing::warn!("Failed to build tray icon: {e}"),
                         }
                     }
-                    // Drop the icon (removes it from the tray) when turned off.
                     (false, true) => *slot = None,
                     _ => {}
                 }
-            }
-        });
-
-        let mut ctrl = ctrl;
-        use_tray_menu_event_handler(move |event| {
-            let win = window();
-            match event.id().as_ref() {
-                "tray_show" => {
-                    let visible = win.window.is_visible();
-                    win.window.set_visible(!visible);
-                    if !visible {
-                        let _ = win.window.set_focus();
-                    }
-                }
-                "tray_playpause" => ctrl.toggle(),
-                "tray_next" => ctrl.play_next(),
-                "tray_prev" => ctrl.play_prev(),
-                "tray_quit" => win.close(),
-                _ => {}
             }
         });
     }
