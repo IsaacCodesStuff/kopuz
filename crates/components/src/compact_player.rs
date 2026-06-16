@@ -104,7 +104,7 @@ pub fn CompactPlayer() -> Element {
             }
 
             div {
-                class: "relative z-10 flex-1 min-h-0 flex items-center gap-3 px-3 py-2",
+                class: "relative z-10 flex-1 min-h-0 flex items-center gap-3 px-3 pt-2 pb-1",
 
                 div {
                     class: format!("h-full aspect-square overflow-hidden bg-white/5 shrink-0 flex items-center justify-center {}", skin.cover),
@@ -124,32 +124,32 @@ pub fn CompactPlayer() -> Element {
                     }
                 }
 
-                div {
-                    class: "flex items-center gap-1 shrink-0",
-                    onmousedown: move |evt| evt.stop_propagation(),
-                    button {
-                        class: skin.ctrl_btn,
-                        onclick: move |_| ctrl.play_prev(),
-                        i { class: "fa-solid fa-backward-step text-sm" }
-                    }
-                    button {
-                        class: skin.play_btn,
-                        onclick: move |_| ctrl.toggle(),
-                        i { class: if is_playing { format!("fa-solid fa-pause {}", skin.play_icon) } else { format!("fa-solid fa-play {} ml-0.5", skin.play_icon) } }
-                    }
-                    button {
-                        class: skin.ctrl_btn,
-                        onclick: move |_| ctrl.play_next(),
-                        i { class: "fa-solid fa-forward-step text-sm" }
-                    }
-                }
-
                 button {
                     class: "w-8 h-8 flex items-center justify-center text-slate-500 hover:text-white transition-colors shrink-0",
                     title: i18n::t("restore_full_player").to_string(),
                     onmousedown: move |evt| evt.stop_propagation(),
                     onclick: move |_| compact_mode.set(false),
                     i { class: "fa-solid fa-up-right-and-down-left-from-center text-xs" }
+                }
+            }
+
+            div {
+                class: "relative z-10 shrink-0 flex items-center justify-center gap-2 px-3 pb-2",
+                onmousedown: move |evt| evt.stop_propagation(),
+                button {
+                    class: skin.ctrl_btn,
+                    onclick: move |_| ctrl.play_prev(),
+                    i { class: "fa-solid fa-backward-step text-sm" }
+                }
+                button {
+                    class: skin.play_btn,
+                    onclick: move |_| ctrl.toggle(),
+                    i { class: if is_playing { format!("fa-solid fa-pause {}", skin.play_icon) } else { format!("fa-solid fa-play {} ml-0.5", skin.play_icon) } }
+                }
+                button {
+                    class: skin.ctrl_btn,
+                    onclick: move |_| ctrl.play_next(),
+                    i { class: "fa-solid fa-forward-step text-sm" }
                 }
             }
 

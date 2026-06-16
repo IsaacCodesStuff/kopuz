@@ -1110,20 +1110,10 @@
     border-left-style: var(--tw-border-style);
     border-left-width: 1px;
   }
-  .border-l-2 {
-    border-left-style: var(--tw-border-style);
-    border-left-width: 2px;
-  }
   .border-amber-500\/20 {
     border-color: color-mix(in srgb, oklch(76.9% 0.188 70.08) 20%, transparent);
     @supports (color: color-mix(in lab, red, red)) {
       border-color: color-mix(in oklab, var(--color-amber-500) 20%, transparent);
-    }
-  }
-  .border-emerald-400\/70 {
-    border-color: color-mix(in srgb, oklch(76.5% 0.177 163.223) 70%, transparent);
-    @supports (color: color-mix(in lab, red, red)) {
-      border-color: color-mix(in oklab, var(--color-emerald-400) 70%, transparent);
     }
   }
   .border-emerald-500\/20 {
@@ -1274,24 +1264,6 @@
     background-color: color-mix(in srgb, #000 85%, transparent);
     @supports (color: color-mix(in lab, red, red)) {
       background-color: color-mix(in oklab, var(--color-black) 85%, transparent);
-    }
-  }
-  .bg-emerald-400\/10 {
-    background-color: color-mix(in srgb, oklch(76.5% 0.177 163.223) 10%, transparent);
-    @supports (color: color-mix(in lab, red, red)) {
-      background-color: color-mix(in oklab, var(--color-emerald-400) 10%, transparent);
-    }
-  }
-  .bg-emerald-400\/15 {
-    background-color: color-mix(in srgb, oklch(76.5% 0.177 163.223) 15%, transparent);
-    @supports (color: color-mix(in lab, red, red)) {
-      background-color: color-mix(in oklab, var(--color-emerald-400) 15%, transparent);
-    }
-  }
-  .bg-emerald-400\/60 {
-    background-color: color-mix(in srgb, oklch(76.5% 0.177 163.223) 60%, transparent);
-    @supports (color: color-mix(in lab, red, red)) {
-      background-color: color-mix(in oklab, var(--color-emerald-400) 60%, transparent);
     }
   }
   .bg-emerald-500\/15 {
@@ -1829,10 +1801,6 @@
     --tw-tracking: 0.2em;
     letter-spacing: 0.2em;
   }
-  .tracking-\[0\.12em\] {
-    --tw-tracking: 0.12em;
-    letter-spacing: 0.12em;
-  }
   .tracking-\[0\.18em\] {
     --tw-tracking: 0.18em;
     letter-spacing: 0.18em;
@@ -1889,20 +1857,8 @@
   .text-emerald-300 {
     color: var(--color-emerald-300);
   }
-  .text-emerald-300\/90 {
-    color: color-mix(in srgb, oklch(84.5% 0.143 164.978) 90%, transparent);
-    @supports (color: color-mix(in lab, red, red)) {
-      color: color-mix(in oklab, var(--color-emerald-300) 90%, transparent);
-    }
-  }
   .text-emerald-400 {
     color: var(--color-emerald-400);
-  }
-  .text-emerald-400\/50 {
-    color: color-mix(in srgb, oklch(76.5% 0.177 163.223) 50%, transparent);
-    @supports (color: color-mix(in lab, red, red)) {
-      color: color-mix(in oklab, var(--color-emerald-400) 50%, transparent);
-    }
   }
   .text-green-400 {
     color: var(--color-green-400);
@@ -2148,30 +2104,6 @@
       --tw-shadow-color: color-mix(in oklab, color-mix(in oklab, var(--color-black) 50%, transparent) var(--tw-shadow-alpha), transparent);
     }
   }
-  .shadow-black\/60 {
-    --tw-shadow-color: color-mix(in srgb, #000 60%, transparent);
-    @supports (color: color-mix(in lab, red, red)) {
-      --tw-shadow-color: color-mix(in oklab, color-mix(in oklab, var(--color-black) 60%, transparent) var(--tw-shadow-alpha), transparent);
-    }
-  }
-  .ring-emerald-400\/20 {
-    --tw-ring-color: color-mix(in srgb, oklch(76.5% 0.177 163.223) 20%, transparent);
-    @supports (color: color-mix(in lab, red, red)) {
-      --tw-ring-color: color-mix(in oklab, var(--color-emerald-400) 20%, transparent);
-    }
-  }
-  .ring-emerald-400\/30 {
-    --tw-ring-color: color-mix(in srgb, oklch(76.5% 0.177 163.223) 30%, transparent);
-    @supports (color: color-mix(in lab, red, red)) {
-      --tw-ring-color: color-mix(in oklab, var(--color-emerald-400) 30%, transparent);
-    }
-  }
-  .ring-emerald-400\/40 {
-    --tw-ring-color: color-mix(in srgb, oklch(76.5% 0.177 163.223) 40%, transparent);
-    @supports (color: color-mix(in lab, red, red)) {
-      --tw-ring-color: color-mix(in oklab, var(--color-emerald-400) 40%, transparent);
-    }
-  }
   .ring-white\/10 {
     --tw-ring-color: color-mix(in srgb, #fff 10%, transparent);
     @supports (color: color-mix(in lab, red, red)) {
@@ -2378,13 +2310,6 @@
       }
     }
   }
-  .group-hover\:bg-emerald-400 {
-    &:is(:where(.group):hover *) {
-      @media (hover: hover) {
-        background-color: var(--color-emerald-400);
-      }
-    }
-  }
   .group-hover\:bg-green-500 {
     &:is(:where(.group):hover *) {
       @media (hover: hover) {
@@ -2570,16 +2495,6 @@
       }
     }
   }
-  .hover\:bg-emerald-400\/25 {
-    &:hover {
-      @media (hover: hover) {
-        background-color: color-mix(in srgb, oklch(76.5% 0.177 163.223) 25%, transparent);
-        @supports (color: color-mix(in lab, red, red)) {
-          background-color: color-mix(in oklab, var(--color-emerald-400) 25%, transparent);
-        }
-      }
-    }
-  }
   .hover\:bg-indigo-400 {
     &:hover {
       @media (hover: hover) {
@@ -2718,13 +2633,6 @@
         @supports (color: color-mix(in lab, red, red)) {
           background-color: color-mix(in oklab, var(--color-white) 4%, transparent);
         }
-      }
-    }
-  }
-  .hover\:text-emerald-300 {
-    &:hover {
-      @media (hover: hover) {
-        color: var(--color-emerald-300);
       }
     }
   }

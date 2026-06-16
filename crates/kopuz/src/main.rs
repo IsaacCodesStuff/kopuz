@@ -2009,9 +2009,9 @@ fn App() -> Element {
                 saved_window_size.set(Some(current));
                 win.window.set_always_on_top(true);
                 let compact_h = if cfg!(target_os = "macos") {
-                    118.0
+                    170.0
                 } else {
-                    96.0
+                    148.0
                 };
                 win.window.set_resizable(true);
                 win.window
