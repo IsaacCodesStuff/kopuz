@@ -1,4 +1,3 @@
-use config::MusicSource;
 #[cfg(all(not(target_arch = "wasm32"), target_os = "macos"))]
 use dioxus::desktop::use_window;
 use dioxus::prelude::*;
@@ -232,7 +231,7 @@ pub fn SidebarNormal(props: SidebarProps) -> Element {
     let is_rtl = i18n::is_rtl();
     let border_side = if is_rtl { "border-l" } else { "border-r" };
 
-    let is_server = config.read().active_source == MusicSource::Server;
+    let is_server = config.read().active_source.is_server();
     let local_class = if !is_server {
         "text-white"
     } else {
@@ -250,6 +249,16 @@ pub fn SidebarNormal(props: SidebarProps) -> Element {
         (true, true) => "right: calc(50% + 2px); width: calc(50% - 4px);",
     };
 
+    // Discover is a capability of the active source (YT), not a config flag —
+    // hide the tab when the active source has no discover surface.
+    let has_discover = {
+        let db = use_context::<db::Db>();
+        use_memo(move || {
+            ::server::source::resolve(db.clone(), &config.read())
+                .capabilities()
+                .discover
+        })
+    };
     let ordered_items: Vec<SidebarItem> = {
         let order = config.read().sidebar_order.clone();
         let mut items: Vec<SidebarItem> = order
@@ -261,6 +270,7 @@ pub fn SidebarNormal(props: SidebarProps) -> Element {
                 items.push(item.clone());
             }
         }
+        items.retain(|item| item.route != Route::Discover || has_discover());
         items
     };
 
@@ -348,8 +358,10 @@ pub fn SidebarNormal(props: SidebarProps) -> Element {
                                 class: "flex-1 text-[11px] font-bold z-10 transition-colors duration-300 {local_class}",
                                 onclick: move |_| {
                                     let mut cfg = config.write();
-                                    cfg.active_source = MusicSource::Local;
+                                    cfg.active_source = config::Source::Local;
                                     cfg.source_explicitly_set = true;
+                                    drop(cfg);
+                                    tracing::info!(target: "kopuz::source", "sidebar toggle → local");
                                 },
                                 "{i18n::t(\"local\").to_uppercase()}"
                             }
@@ -357,8 +369,13 @@ pub fn SidebarNormal(props: SidebarProps) -> Element {
                                 class: "flex-1 text-[11px] font-bold z-10 transition-colors duration-300 {server_class}",
                                 onclick: move |_| {
                                     let mut cfg = config.write();
-                                    cfg.active_source = MusicSource::Server;
-                                    cfg.source_explicitly_set = true;
+                                    if let Some(s) = cfg.server_toggle_target() {
+                                        cfg.active_source = s;
+                                        cfg.source_explicitly_set = true;
+                                        let label = cfg.active_source.as_str().to_string();
+                                        drop(cfg);
+                                        tracing::info!(target: "kopuz::source", source = %label, "sidebar toggle → server");
+                                    }
                                 },
                                 "{i18n::t(\"server\").to_uppercase()}"
                             }

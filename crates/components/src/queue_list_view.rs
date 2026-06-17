@@ -2,7 +2,6 @@ use config::AppConfig;
 use dioxus::document::eval;
 use dioxus::prelude::*;
 use hooks::PlayerController;
-use reader::Library;
 use serde_json::Value;
 use std::fmt;
 
@@ -213,7 +212,6 @@ const FULLSCREEN_ITEM_HEIGHT: f64 = 76.0;
 #[component]
 pub fn QueueListView(
     items: Vec<reader::Track>,
-    library: Signal<Library>,
     config: Signal<AppConfig>,
     current_queue_index: Signal<usize>,
     layout: LayoutMode,
@@ -237,6 +235,8 @@ pub fn QueueListView(
     };
     let scroll_stat = use_signal(|| 0.0_f64);
     let container_height = use_signal(|| 0.0_f64);
+    let source_local = use_memo(|| db::Source::Local);
+    let albums_res = hooks::use_db_queries::use_albums(source_local);
 
     use_effect(move || {
         if layout == LayoutMode::Rightbar {
@@ -381,56 +381,16 @@ pub fn QueueListView(
     };
 
     let get_track_cover = |track: &reader::Track| -> Option<utils::CoverUrl> {
-        // Use `peek()` instead of reactive reads here.
-        // Cover lookup should not subscribe to library/config updates.
-        let lib = library.peek();
+        // `peek()`, not reactive reads — cover lookup shouldn't subscribe to
+        // library/config updates. Resolution is source-agnostic via the source
+        // cover seam (local album art vs the per-service remote URL).
         let conf = config.peek();
-
-        let is_server_track = conf.active_source == config::MusicSource::Server;
-
-        if is_server_track {
-            if let Some(server) = &conf.server {
-                let path_str = track.path.to_string_lossy();
-                let url = match server.service {
-                    config::MusicService::Jellyfin => {
-                        utils::jellyfin_image::track_cover_url_with_album_fallback(
-                            &path_str,
-                            &track.album_id,
-                            &server.url,
-                            server.access_token.as_deref(),
-                            cover_max_width,
-                            80,
-                        )
-                    }
-                    config::MusicService::Subsonic | config::MusicService::Custom => {
-                        utils::subsonic_image::subsonic_image_url_from_path(
-                            &path_str,
-                            &server.url,
-                            server.access_token.as_deref(),
-                            cover_max_width,
-                            80,
-                        )
-                    }
-                    config::MusicService::YtMusic | config::MusicService::SoundCloud => {
-                        utils::jellyfin_image::track_cover_url_with_album_fallback(
-                            &path_str,
-                            &track.album_id,
-                            "",
-                            None,
-                            cover_max_width,
-                            80,
-                        )
-                    }
-                };
-                return utils::map_cover_url(url);
-            }
-            None
-        } else {
-            lib.albums
-                .iter()
-                .find(|a| a.id == track.album_id)
-                .and_then(|album| utils::format_artwork_url(album.cover_path.as_ref()))
-        }
+        let album_cover = albums_res
+            .peek()
+            .as_ref()
+            .and_then(|albums| albums.iter().find(|a| a.id == track.album_id))
+            .and_then(|a| a.cover_path.clone());
+        server::cover::track(&conf, track, album_cover.as_deref(), cover_max_width)
     };
 
     let mut play_song_at_index = move |index: usize| {

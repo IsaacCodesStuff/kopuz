@@ -1,4 +1,3 @@
-use config::MusicSource;
 #[cfg(all(not(target_arch = "wasm32"), target_os = "macos"))]
 use dioxus::desktop::use_window;
 use dioxus::prelude::*;
@@ -133,7 +132,16 @@ pub fn SidebarModern(props: SidebarProps) -> Element {
     };
     let onmouseup = move |_| is_resizing.set(false);
 
-    let is_server = config.read().active_source == MusicSource::Server;
+    let is_server = config.read().active_source.is_server();
+    // Discover is a capability of the active source (YT), not a config flag.
+    let has_discover = {
+        let db = use_context::<db::Db>();
+        use_memo(move || {
+            ::server::source::resolve(db.clone(), &config.read())
+                .capabilities()
+                .discover
+        })
+    };
     let collapsed = if is_android {
         false
     } else {
@@ -208,13 +216,13 @@ pub fn SidebarModern(props: SidebarProps) -> Element {
                         button {
                             class: if !is_server { "text-[10px] font-bold py-1" } else { "text-[10px] font-bold py-1 opacity-30" },
                             style: if !is_server { "color: var(--color-indigo-500);" } else { "" },
-                            onclick: move |_| { config.write().active_source = MusicSource::Local; config.write().source_explicitly_set = true; },
+                            onclick: move |_| { config.write().active_source = config::Source::Local; config.write().source_explicitly_set = true; tracing::info!(target: "kopuz::source", "sidebar toggle → local"); },
                             i { class: "fa-solid fa-hard-drive text-xs" }
                         }
                         button {
                             class: if is_server { "text-[10px] font-bold py-1" } else { "text-[10px] font-bold py-1 opacity-30" },
                             style: if is_server { "color: var(--color-indigo-500);" } else { "" },
-                            onclick: move |_| { config.write().active_source = MusicSource::Server; config.write().source_explicitly_set = true; },
+                            onclick: move |_| { let t = config.read().server_toggle_target(); if let Some(s) = t { let label = s.as_str().to_string(); config.write().active_source = s; config.write().source_explicitly_set = true; tracing::info!(target: "kopuz::source", source = %label, "sidebar toggle → server"); } },
                             i { class: "fa-solid fa-server text-xs" }
                         }
                     }
@@ -224,13 +232,13 @@ pub fn SidebarModern(props: SidebarProps) -> Element {
                             button {
                                 class: "flex-1 py-1.5 transition-colors",
                                 style: if !is_server { "background: color-mix(in oklab, var(--color-indigo-500) 20%, transparent); color: var(--color-indigo-500);" } else { "color: rgba(255,255,255,0.3);" },
-                                onclick: move |_| { config.write().active_source = MusicSource::Local; config.write().source_explicitly_set = true; },
+                                onclick: move |_| { config.write().active_source = config::Source::Local; config.write().source_explicitly_set = true; tracing::info!(target: "kopuz::source", "sidebar toggle → local"); },
                                 "{i18n::t(\"local\").to_uppercase()}"
                             }
                             button {
                                 class: "flex-1 py-1.5 transition-colors",
                                 style: if is_server { "background: color-mix(in oklab, var(--color-indigo-500) 20%, transparent); color: var(--color-indigo-500);" } else { "color: rgba(255,255,255,0.3);" },
-                                onclick: move |_| { config.write().active_source = MusicSource::Server; config.write().source_explicitly_set = true; },
+                                onclick: move |_| { let t = config.read().server_toggle_target(); if let Some(s) = t { let label = s.as_str().to_string(); config.write().active_source = s; config.write().source_explicitly_set = true; tracing::info!(target: "kopuz::source", source = %label, "sidebar toggle → server"); } },
                                 "{i18n::t(\"server\").to_uppercase()}"
                             }
                         }
@@ -251,15 +259,17 @@ pub fn SidebarModern(props: SidebarProps) -> Element {
                             }
                         }
                         for item in *items {
-                            ModernNavItem {
-                                key: "{item.key}",
-                                item: item.clone(),
-                                active: current_route == item.route,
-                                collapsed,
-                                onclick: move |_| {
-                                    props.on_navigate.call(item.route);
-                                    if is_android { mobile_collapsed.set(true); }
-                                },
+                            if item.route != Route::Discover || has_discover() {
+                                ModernNavItem {
+                                    key: "{item.key}",
+                                    item: item.clone(),
+                                    active: current_route == item.route,
+                                    collapsed,
+                                    onclick: move |_| {
+                                        props.on_navigate.call(item.route);
+                                        if is_android { mobile_collapsed.set(true); }
+                                    },
+                                }
                             }
                         }
                     }

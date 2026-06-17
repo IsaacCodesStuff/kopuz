@@ -3,7 +3,7 @@ pub mod navigation_controller;
 pub mod normal;
 pub mod shared;
 pub use navigation_controller::NavigationController;
-pub mod album_details;
+pub mod album_play_button;
 pub mod bottombar;
 pub mod constants;
 pub mod dots_menu;

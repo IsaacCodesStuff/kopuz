@@ -40,9 +40,6 @@ use std::time::{Duration, Instant};
 use serde_json::{Value, json};
 use tokio::sync::{mpsc, oneshot};
 
-#[cfg(target_os = "windows")]
-use std::os::windows::process::CommandExt;
-
 const LIB: &str = include_str!("solver/lib.min.js");
 const CORE: &str = include_str!("solver/core.min.js");
 const WEB_UA: &str =
@@ -334,10 +331,8 @@ fn detect_runtime() -> Option<Runtime> {
             },
         ];
         CANDIDATES.iter().copied().find(|c| {
-            let mut cmd = std::process::Command::new(c.bin);
-            #[cfg(target_os = "windows")]
-            cmd.creation_flags(0x08000000); // CREATE_NO_WINDOW
-            cmd.arg("--version")
+            std::process::Command::new(c.bin)
+                .arg("--version")
                 .stdout(std::process::Stdio::null())
                 .stderr(std::process::Stdio::null())
                 .status()
@@ -379,18 +374,14 @@ impl JsEngine for SubprocessEngine {
                     .await
                     .map_err(|e| format!("write solver temp: {e}"))?;
             }
-            let spawned = {
-                let mut cmd = tokio::process::Command::new(rt.bin);
-                #[cfg(target_os = "windows")]
-                cmd.creation_flags(0x08000000); // CREATE_NO_WINDOW
-                cmd.args(rt.args)
-                    .arg(&path)
-                    .stdout(std::process::Stdio::piped())
-                    .stderr(std::process::Stdio::piped())
-                    .kill_on_drop(true)
-                    .spawn()
-            };
-            let child = match spawned {
+            let child = match tokio::process::Command::new(rt.bin)
+                .args(rt.args)
+                .arg(&path)
+                .stdout(std::process::Stdio::piped())
+                .stderr(std::process::Stdio::piped())
+                .kill_on_drop(true)
+                .spawn()
+            {
                 Ok(c) => c,
                 Err(e) => {
                     let _ = tokio::fs::remove_file(&path).await;
