@@ -1,11 +1,12 @@
 use std::collections::HashSet;
 
+use crate::NavigationController;
 use crate::constants::{COLUMNS_NORMAL, COLUMNS_NORMAL_ALBUM};
 use crate::header::Header;
 use crate::reorder_buttons::ReorderButtons;
-use crate::showcase::{self, ShowcaseProps, SortField};
+use crate::showcase::{self, ShowcaseProps};
 use crate::track_row::TrackRow;
-use config::{AppConfig, MusicService, MusicSource};
+use config::AppConfig;
 use dioxus::prelude::*;
 use hooks::use_player_controller::PlayerController;
 
@@ -13,11 +14,13 @@ use hooks::use_player_controller::PlayerController;
 pub fn ShowcaseNormal(props: ShowcaseProps) -> Element {
     let mut ctrl = use_context::<PlayerController>();
     let config = use_context::<Signal<AppConfig>>();
+    let _nav_ctrl = use_context::<NavigationController>();
     let total_seconds: u64 = props.tracks.iter().map(|t| t.duration).sum();
     let duration_min = total_seconds / 60;
 
-    let lib = props.library.read();
-    let is_server_source = config.read().active_source == MusicSource::Server;
+    // Per-track cover resolver (source dispatch + local-album lookup live in the
+    // source layer; no partition decision here).
+    let cover_for = hooks::use_db_queries::use_cover_resolver(80);
 
     let offline_tracks = config.read().offline_tracks.clone();
     let sort_state = use_signal(|| None);
@@ -33,6 +36,7 @@ pub fn ShowcaseNormal(props: ShowcaseProps) -> Element {
         .iter()
         .map(|(track, _)| track.clone())
         .collect();
+    let sorted_tracks_arc = std::sync::Arc::new(sorted_tracks.clone());
 
     let has_multiple_discs = sorted_tracks
         .iter()
@@ -45,7 +49,7 @@ pub fn ShowcaseNormal(props: ShowcaseProps) -> Element {
 
     let currently_playing_path = {
         let idx = *ctrl.current_queue_index.read();
-        ctrl.get_track_at(idx).map(|track| track.path.clone())
+        ctrl.get_track_at(idx).map(|track| track.id.clone())
     };
     let current_song_title = ctrl.current_song_title.read().clone();
     let current_song_artist = ctrl.current_song_artist.read().clone();
@@ -54,13 +58,14 @@ pub fn ShowcaseNormal(props: ShowcaseProps) -> Element {
     let tracks_for_play_all = sorted_tracks.clone();
     let selected_queue_tracks: Vec<_> = sorted_tracks
         .iter()
-        .filter(|track| props.selected_tracks.contains(&track.path))
+        .filter(|track| props.selected_tracks.contains(&track.id))
         .cloned()
         .collect();
+    let selected_queue_tracks_arc = std::sync::Arc::new(selected_queue_tracks.clone());
 
     let all_downloaded = !props.tracks.is_empty()
         && props.tracks.iter().all(|t| {
-            let p = t.path.to_string_lossy();
+            let p = t.id.uid();
             let id = p.split(':').nth(1).unwrap_or(&p);
             if let Some(path_str) = offline_tracks.get(id) {
                 std::path::Path::new(path_str).exists()
@@ -74,13 +79,29 @@ pub fn ShowcaseNormal(props: ShowcaseProps) -> Element {
     } else {
         COLUMNS_NORMAL
     };
+    let column_gap = if cfg!(target_os = "android") {
+        "0.5rem"
+    } else {
+        "1.5rem"
+    };
+
+    let scroll_stat = use_signal(|| 0.0_f64);
+    let container_height = use_signal(|| 0.0_f64);
+    const ITEM_HEIGHT: f64 = 56.0;
+
+    let scroll_info = crate::virtual_scroll::use_virtual_scroll(
+        *scroll_stat.read(),
+        *container_height.read(),
+        sorted_track_pairs.len(),
+        ITEM_HEIGHT,
+    );
 
     rsx! {
          div {
-             class: "select-none",
+             class: "select-none flex-1 min-h-0 flex flex-col w-full",
              div {
-                 class: "flex flex-col md:flex-row items-end gap-8 mb-12",
-                 div { class: "w-64 h-64 rounded-xl bg-stone-800 overflow-hidden relative flex-shrink-0",
+                 class: if cfg!(target_os = "android") { "flex flex-col items-center text-center gap-4 mb-6 shrink-0" } else { "flex flex-col md:flex-row items-end gap-8 mb-12 shrink-0" },
+                 div { class: if cfg!(target_os = "android") { "w-44 h-44 rounded-xl bg-stone-800 overflow-hidden relative flex-shrink-0" } else { "w-64 h-64 rounded-xl bg-stone-800 overflow-hidden relative flex-shrink-0" },
                      if let Some(url) = &props.cover_url {
                          img { src: "{url.as_ref()}", class: "w-full h-full object-cover" }
                      } else {
@@ -102,10 +123,18 @@ pub fn ShowcaseNormal(props: ShowcaseProps) -> Element {
                  }
                  div { class: "flex-1",
                      if !props.description.is_empty() {
-                         h5 { class: "text-sm font-bold tracking-widest text-white/60 uppercase mb-2", "{props.description}" }
+                         if let Some(on_description_click) = props.on_description_click {
+                             button {
+                                 class: "text-sm font-bold tracking-widest text-white/60 uppercase mb-2 text-left cursor-pointer hover:underline hover:text-white transition-colors",
+                                 onclick: move |_| on_description_click.call(()),
+                                 "{props.description}"
+                             }
+                         } else {
+                             h5 { class: "text-sm font-bold tracking-widest text-white/60 uppercase mb-2", "{props.description}" }
+                         }
                      }
-                     h1 { class: "text-5xl md:text-7xl font-bold text-white mb-6", "{props.name}" }
-                     div { class: "flex items-center gap-6 text-slate-400",
+                     h1 { class: if cfg!(target_os = "android") { "text-3xl font-bold text-white mb-3" } else { "text-5xl md:text-7xl font-bold text-white mb-6" }, "{props.name}" }
+                     div { class: if cfg!(target_os = "android") { "flex items-center justify-center gap-4 text-slate-400" } else { "flex items-center gap-6 text-slate-400" },
                          {
                             let count = props.tracks.len();
                             let song_text = i18n::t_with("showcase_song_count", &[("count", count.to_string())]);
@@ -170,60 +199,41 @@ pub fn ShowcaseNormal(props: ShowcaseProps) -> Element {
                  }
              }
 
-             div { class: "space-y-1",
+             div { class: "flex-1 min-h-0 flex flex-col w-full",
                  if props.tracks.is_empty() {
                      div { class: "py-12 flex flex-col items-center justify-center text-slate-600",
                          i { class: "fa-regular fa-folder-open text-4xl mb-4" }
                          p { class: "text-lg", "{i18n::t(\"no_songs_here\")}" }
                      }
                  } else {
-                     Header {
-                         is_modern: false,
-                         is_album: props.is_album,
-                         is_selection_mode: props.is_selection_mode,
-                         on_select_all: props.on_select_all,
-                         all_selected: props.all_selected,
-                         sort_state: sort_state,
-                         is_reorderable: props.is_reorderable
+                     div { class: "shrink-0",
+                         Header {
+                             is_modern: false,
+                             is_album: props.is_album,
+                             is_selection_mode: props.is_selection_mode,
+                             on_select_all: props.on_select_all,
+                             all_selected: props.all_selected,
+                             sort_state: sort_state,
+                             is_reorderable: props.is_reorderable
+                         }
                      }
-
-                     for (display_idx, (track, idx)) in sorted_track_pairs.iter().enumerate() {
+                     div { class: "flex-1 min-h-0 w-full flex flex-col overflow-hidden",
+                     crate::virtual_scroll::VirtualScrollView {
+                         id: "normal-showcase-scroll".to_string(),
+                         class: "flex-1 min-h-0 overflow-y-auto pb-20".to_string(),
+                         scroll_stat,
+                         container_height,
+                         item_height: ITEM_HEIGHT,
+                         saved_scroll: 0.0,
+                         top_pad: scroll_info.top_pad,
+                         bottom_pad: scroll_info.bottom_pad,
+                         for (display_idx, (track, idx)) in sorted_track_pairs.iter().enumerate().skip(scroll_info.start_index).take(scroll_info.items_to_render) {
                          {
                              let idx = *idx;
-                             let cover_url = if is_server_source {
-                                 if let Some(server) = &config.read().server {
-                                     let path_str = track.path.to_string_lossy();
-                                     let url = match server.service {
-                                         MusicService::Jellyfin => {
-                                             utils::jellyfin_image::track_cover_url_with_album_fallback(
-                                                 &path_str,
-                                                 &track.album_id,
-                                                 &server.url,
-                                                 server.access_token.as_deref(),
-                                                 80,
-                                                 80,
-                                             )
-                                         }
-                                         MusicService::Subsonic | MusicService::Custom => {
-                                             utils::subsonic_image::subsonic_image_url_from_path(
-                                                 &path_str,
-                                                 &server.url,
-                                                 server.access_token.as_deref(),
-                                                 80,
-                                                 80,
-                                             )
-                                         }
-                                     };
-                                     utils::map_cover_url(url)
-                                 } else { None }
-                             } else {
-                                 lib.albums.iter()
-                                    .find(|a| a.id == track.album_id)
-                                    .and_then(|a| utils::format_artwork_url(a.cover_path.as_ref()))
-                             };
+                             let cover_url = cover_for(track);
 
-                             let is_selected = props.selected_tracks.contains(&track.path);
-                             let matches_current_path = currently_playing_path.as_ref() == Some(&track.path);
+                             let is_selected = props.selected_tracks.contains(&track.id);
+                             let matches_current_path = currently_playing_path.as_ref() == Some(&track.id);
                              let matches_current_metadata = currently_playing_path.is_none()
                                  && !current_song_title.is_empty()
                                  && track.title == current_song_title
@@ -235,7 +245,7 @@ pub fn ShowcaseNormal(props: ShowcaseProps) -> Element {
                              let can_move_up = props.is_reorderable && idx > 0;
                              let can_move_down = props.is_reorderable && idx + 1 < track_count;
 
-                             let path_str = track.path.to_string_lossy();
+                             let path_str = track.id.uid();
                              let item_id_str: String = path_str.split(':').nth(1).unwrap_or(&path_str).to_string();
                              let is_downloaded = if let Some(path_str) = offline_tracks.get(&item_id_str) {
                                  std::path::Path::new(path_str).exists()
@@ -243,7 +253,7 @@ pub fn ShowcaseNormal(props: ShowcaseProps) -> Element {
                                  false
                              };
                              let is_downloading = false;
-                             let play_queue = sorted_tracks.clone();
+                             let play_queue = std::sync::Arc::clone(&sorted_tracks_arc);
 
                              let mut is_new_disc = false;
                              if track.disc_number != last_disc && sort_state.peek().is_none() && props.is_album {
@@ -253,7 +263,9 @@ pub fn ShowcaseNormal(props: ShowcaseProps) -> Element {
                              }
 
                              rsx! {
-                                 // discs
+                                 div {
+                                     key: "{track.id.uid()}",
+                                     class: "contents",
                                  div {
                                      class: "flex items-center group",
                                      if has_multiple_discs && props.is_album && is_new_disc && sort_state.peek().is_none() {
@@ -261,7 +273,7 @@ pub fn ShowcaseNormal(props: ShowcaseProps) -> Element {
                                              class: "flex-1 min-w-0",
                                              div {
                                                  class: "grid items-center p-2 rounded-lg hover:bg-white/5 group transition-colors relative select-none",
-                                                 style: format!("grid-template-columns: {columns}; column-gap: 1.5rem;"),
+                                                 style: format!("grid-template-columns: {columns}; column-gap: {column_gap};"),
                                                  i { class: "fa-solid fa-compact-disc text-center" }
                                                  p { "Disc {track.disc_number.unwrap_or(1)}" }
                                              }
@@ -270,20 +282,20 @@ pub fn ShowcaseNormal(props: ShowcaseProps) -> Element {
                                  }
 
                                  div {
-                                     key: "{track.path.display()}",
                                      class: "flex items-center group",
                                      div { class: "flex-1 min-w-0",
                                          TrackRow {
                                              track: track.clone(),
+                                             on_start_radio: crate::track_row::radio_handler(track.clone()),
                                              cover_url: cover_url,
-                                             is_menu_open: props.active_track.as_ref() == Some(&track.path),
+                                             is_menu_open: props.active_track.as_ref() == Some(&track.id),
                                              is_album: props.is_album,
                                              is_selection_mode: props.is_selection_mode,
                                              is_selected: is_selected,
                                              is_downloaded: is_downloaded,
                                              is_downloading: is_downloading,
                                              is_currently_playing,
-                                             selected_queue_tracks: selected_queue_tracks.clone(),
+                                             selected_queue_tracks: (*selected_queue_tracks_arc).clone(),
                                              row_num: Some(display_idx + 1 - last_disc_size),
                                              on_select: move |selected| {
                                                 if let Some(handler) = &props.on_select {
@@ -325,13 +337,14 @@ pub fn ShowcaseNormal(props: ShowcaseProps) -> Element {
                                                      handler.call(idx);
                                                  }
                                              },
+                                             on_view_metadata: props.on_view_metadata.map(|h| EventHandler::new(move |_| h.call(idx))),
                                              on_download: move |_| {
                                                  if let Some(handler) = &props.on_download_track {
                                                      handler.call(idx);
                                                  }
                                              },
                                              on_play: move |_| {
-                                                 ctrl.queue.set(play_queue.clone());
+                                                 ctrl.queue.set((*play_queue).clone());
                                                  ctrl.play_track(display_idx);
                                              }
                                          }
@@ -345,8 +358,11 @@ pub fn ShowcaseNormal(props: ShowcaseProps) -> Element {
                                          }
                                      }
                                  }
+                                 }
                              }
                          }
+                         }
+                     }
                      }
                  }
              }

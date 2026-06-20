@@ -3,6 +3,9 @@ name = "components"
 version.workspace = true
 edition = "2024"
 
+[lints]
+workspace = true
+
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 dioxus = { workspace = true, features = ["desktop"] }
 directories = { workspace = true }
@@ -13,6 +16,7 @@ dioxus = { workspace = true, features = ["web"] }
 [dependencies]
 webbrowser = "1.2.1"
 tracing = "0.1"
+base64 = "0.22"
 scrobble = { workspace = true }
 uuid = { workspace = true }
 player = { workspace = true }
@@ -20,10 +24,14 @@ reader = { workspace = true }
 utils = { workspace = true }
 kopuz_route = { workspace = true }
 config = { workspace = true }
-rfd = { workspace = true }
 hooks = { workspace = true }
 rand = { workspace = true }
 server = { workspace = true }
 tokio = { workspace = true, features = ["time", "fs"] }
 serde_json = { workspace = true }
 i18n = { workspace = true }
+
+# Native file dialogs (folder/cover pickers). Not used on web, and rfd doesn't work on
+# Android (which auto-detects the music dir via JNI instead).
+[target.'cfg(all(not(target_arch = "wasm32"), not(target_os = "android")))'.dependencies]
+rfd = { workspace = true }

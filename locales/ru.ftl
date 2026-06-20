@@ -27,10 +27,10 @@ add = Добавить
 add_folder = Добавить папку
 no_music_folders = Музыкальные папки не настроены
 add_server = Добавить сервер
-# TODO: NEED LOCALIZATION
-connect_to_lastfm = Connect to Last.fm
-lastfm_connected = Last.fm Connected
-# TODO: NEED LOCALIZATION
+connect_to_lastfm = Подключиться к Last.fm
+connect_to_librefm = Подключиться к Libre.fm
+lastfm_connected = Подключено к Last.fm
+librefm_connected = Подключено к Libre.fm
 server_details = Данные сервера
 server_name = Имя сервера
 server_url = Адрес сервера
@@ -43,6 +43,8 @@ username = Имя пользователя
 password = Пароль
 player_settings = Настройки плеера
 discord_presence = Discord Presence
+connectivity = Подключения
+discord_presence_paused = Показать статус Discord на паузе
 reduce_animations = Уменьшение анимаций
 show_source_toggle = Показать переключатель источника
 titlebar_mode = Строка заголовка
@@ -51,6 +53,10 @@ titlebar_system = Системные украшения
 titlebar_off = Без строки заголовка
 volume = Громкость
 local = Локально
+source = Source
+sources = Sources
+manage_sources = Manage sources
+source_on_this_device = On this device
 server = Сервер
 ytdlp = Загрузки
 
@@ -58,8 +64,11 @@ ytdlp = Загрузки
 add_to_favorites = Добавить в избранное
 remove_from_favorites = Удалить из избранного
 add_to_queue = Добавить в очередь
+play_next = Воспроизвести следующим
 add_to_playlist = Добавить в плейлист
 remove_from_playlist = Удалить из плейлиста
+share_musicbrainz = Поделиться (MusicBrainz)
+share_link_copied = Ссылка MusicBrainz скопирована
 delete = Удалить
 delete_song = Удалить песню
 delete_album = Удалить альбом
@@ -76,6 +85,9 @@ create = Создать
 save = Сохранить
 enabled = АКТИВНО
 disabled = ОТКЛЮЧЕНО
+play = Воспроизвести
+shuffle = Перемешать
+# ------
 
 # Navigation & Headers
 tracks = Треки
@@ -124,17 +136,15 @@ custom_manual = Нестандартные (ручное API)
 server_name_optional = Имя сервера (опционально)
 server_url_placeholder = http://localhost:8096
 change = Изменить
-heart_track_to_add = Отметьте ❤️ трек, чтобы добавить его в избранное.
-heart_track_to_add_server = Отметьте ❤️ трек, чтобы добавить его в избранное и синхронизировать на сервер.
+heart_track_to_add = Поставьте ❤️ треку, чтобы добавить его в избранное.
+heart_track_to_add_server = Поставьте ❤️ треку, чтобы добавить его в избранное и синхронизировать его с сервером.
 
 # Search & Placeholders
 search_placeholder = Поиск артистов, альбомов или треков...
 no_results_found = По запросу "{ $query }" ничего не найдено
 listenbrainz_token_placeholder = Введите ваш токен ListenBrainz
-# TODO: NEED LOCALIZATION
-lastfm_api_key_placeholder = Enter your Last.fm API Key
-lastfm_api_secret_placeholder = Enter your Last.fm API Secret
-# TODO: NEED LOCALIZATION
+lastfm_api_key_placeholder = Введите ваш API-ключ Last.fm
+lastfm_api_secret_placeholder = Введите ваш API-секрет Last.fm
 
 # Empty States
 album_not_found = Альбом не найден
@@ -164,7 +174,7 @@ unsupported_provider_desc = Специфичные для провайдера {
 
 # Additional Keys
 no_genres_found = Жанры не найдены в вашей библиотеке.
-jump_back_in = Продолжить слушать
+jump_back_in = Продолжить прослушивание
 by_artist = От
 by_artist_full = { $artist }
 start_listening = Начать прослушивание
@@ -175,11 +185,14 @@ no_tracks_found = Треки не найдены.
 unknown_artist = Неизвестный исполнитель
 unknown_album = Неизвестный альбом
 unknown_title = Неизвестное название
-unknown_genre = Неизвестно
+unknown_genre = Неизвестный жанр
 most_played_local_tracks = Ваши самые прослушиваемые локальные треки.
 no_tracks_in_library = В вашей библиотеке не найдено треков.
 no_songs_here = Здесь нет песен.
 syncing_with_server = Синхронизация с сервером...
+yt_syncing_progress = Синхронизация — загружено { $count } треков
+yt_synced_total = Синхронизировано { $count } понравившихся треков
+refresh = Обновить
 most_played_tracks = Ваши самые прослушиваемые треки.
 no_more_songs = Больше нет песен в очереди
 server_playlist = Плейлист сервера
@@ -189,6 +202,8 @@ featured_album = Избранный альбом
 minimize = Свернуть
 maximize = Развернуть
 close = Закрыть
+mini_player = Мини-плеер
+restore_full_player = Восстановить полный плеер
 shuffle_on = Перемешивание: Вкл
 shuffle_off = Перемешивание: Выкл
 repeat_off = Повтор: Выкл
@@ -198,6 +213,11 @@ rescan_library = Пересканировать библиотеку
 refresh_music_library = Обновить музыкальную библиотеку
 listenbrainz = ListenBrainz
 lastfm = Last.fm
+librefm = Libre.fm
+enable_tracing = Включить трассировку производительности
+tracing_warning = Увеличивает нагрузку и размер файла трассировки; применяется после перезапуска.
+export_logs = Экспорт журналов
+open_logs_folder = Открыть папку журналов
 album_art_gradient = Градиент обложки
 default_theme = По умолчанию
 gruvbox_material = Gruvbox Material
@@ -367,9 +387,11 @@ artist_photo_source = Источник фото исполнителя
 artist_photo = Фото исполнителя
 album_cover = Обложка альбома
 auto_fetch_covers = Автоматически загружать обложки альбомов
+prefer_local_lyrics = Предпочитать локальные тексты (.lrc / встроенные, без онлайн-резерва)
+enable_musixmatch_lyrics = Использовать Musixmatch как резервный источник текстов
 cover_fetch_strategy = Стратегия загрузки обложек
-musicbrainz_first = MusicBrainz сначала
-lastfm_first = Last.fm сначала
+musicbrainz_first = Сначала MusicBrainz
+lastfm_first = Сначала Last.fm
 musicbrainz_only = Только MusicBrainz
 lastfm_only = Только Last.fm
 remove_cover = Удалить обложку
@@ -390,6 +412,7 @@ radio_asiadreamradio_desc = Сердце Джей-поп музыки - Джей
 radio_live_stream = Прямой эфир
 
 auto_check_updates = Автоматически проверять обновления
+minimize_to_tray = Свернуть в системный трей
 update_available = Доступно обновление
 update_banner_message = Доступна версия Kopuz { $version }.
 view_release = Открыть релиз
@@ -411,3 +434,27 @@ radio_registries_empty = Реестры не настроены
 offline_downloads = Офлайн-загрузки
 download_quality = Качество загрузки
 saving = Сохранение...
+discover_more_loading = Загрузка…
+discover_failed = Не удалось загрузить раздел Открытий: { $error }
+discover_requires_ytmusic = Открытия доступны только когда YouTube Music — активный сервер.
+discover_show_all = Показать все
+yt_anon_playlists = Войдите в YouTube Music, чтобы увидеть плейлисты из библиотеки.
+yt_anon_favorites = Войдите в YouTube Music, чтобы увидеть понравившиеся треки.
+
+# Metadata Viewer / Editor
+view_metadata = Просмотр метаданных
+edit_metadata = Редактировать метаданные
+edit = Редактировать
+track_number = Трек №
+disc_number = Диск №
+duration = Длительность
+sample_rate = Частота дискретизации
+bitrate = Битрейт
+musicbrainz_release = Релиз MusicBrainz
+musicbrainz_recording = Запись MusicBrainz
+musicbrainz_track = Трек MusicBrainz
+path = Путь
+add_photo = Добавить фото
+change_photo = Изменить фото
+remove_photo = Удалить фото
+metadata_edit_warning = Пустые поля удаляют тег. Запись напрямую в файл — отменить нельзя.

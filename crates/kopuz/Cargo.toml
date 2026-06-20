@@ -3,6 +3,9 @@ name = "kopuz"
 version.workspace = true
 edition = "2024"
 
+[lints]
+workspace = true
+
 [package.metadata.bundle]
 identifier = "com.temidaradev.kopuz"
 icon = ["assets/app.ico", "assets/logo.png"]
@@ -11,14 +14,22 @@ category = "public.app-category.music"
 [package.metadata.bundle.macos]
 info_plist_path = "Info.plist"
 
+# Shared by desktop + android (native, non-web).
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
-dioxus = { workspace = true, features = ["desktop"] }
 directories = { workspace = true }
 discord-presence = { workspace = true }
+
+# Desktop only. Android uses the mobile renderer, logs to logcat, and has no Discord IPC.
+[target.'cfg(all(not(target_arch = "wasm32"), not(target_os = "android")))'.dependencies]
+dioxus = { workspace = true, features = ["desktop"] }
 discord-rich-presence = { workspace = true }
 tracing-subscriber = { workspace = true }
 tracing-appender = { workspace = true }
+ctrlc = { workspace = true }
 webbrowser = "1.2.1"
+
+[target.'cfg(target_os = "android")'.dependencies]
+dioxus = { workspace = true, features = ["mobile"] }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 dioxus = { workspace = true, features = ["web"] }
@@ -32,7 +43,9 @@ player = { workspace = true }
 components = { workspace = true }
 reader = { workspace = true }
 config = { workspace = true }
+db = { workspace = true }
 pages = { workspace = true }
+server = { workspace = true }
 kopuz_route = { workspace = true }
 radio = { workspace = true }
 tokio = { workspace = true }
@@ -51,9 +64,10 @@ reqwest = { workspace = true, features = ["json"] }
 
 [target.'cfg(target_os = "linux")'.dependencies]
 webkit2gtk = { version = "2.0", features = ["v2_16"] }
+libloading = "0.8"
 
 [target.'cfg(target_os = "macos")'.dependencies]
-objc2 = { version = "0.6.3", features = ["std"] }
+objc2 = { version = "0.6.4", features = ["std"] }
 objc2-foundation = { version = "0.3.2", features = [
     "NSString",
     "NSDictionary",
@@ -81,6 +95,10 @@ windows = { version = "0.62", features = [
 
 [target.'cfg(target_os = "windows")'.build-dependencies]
 winres = "0.1"
+
+# Used by build.rs to generate Android launcher icons from assets/logo.png.
+[build-dependencies]
+image = { workspace = true }
 
 [features]
 default = []

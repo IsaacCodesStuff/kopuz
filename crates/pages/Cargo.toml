@@ -3,12 +3,19 @@ name = "pages"
 version.workspace = true
 edition = "2024"
 
+[lints]
+workspace = true
+
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 dioxus = { workspace = true, features = ["desktop"] }
 directories = { workspace = true }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 dioxus = { workspace = true, features = ["web"] }
+
+# rfd is only used by the yt-dlp page, which is desktop/web only (excluded on Android).
+[target.'cfg(all(not(target_arch = "wasm32"), not(target_os = "android")))'.dependencies]
+rfd = { workspace = true }
 
 [dependencies]
 uuid = { workspace = true }
@@ -17,7 +24,6 @@ reader = { workspace = true }
 components = { workspace = true }
 hooks = { workspace = true }
 config = { workspace = true }
-rfd = { workspace = true }
 utils = { workspace = true }
 kopuz_route = { workspace = true }
 server = { workspace = true }

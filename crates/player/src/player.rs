@@ -9,6 +9,16 @@ pub struct NowPlayingMeta {
     pub artwork: Option<String>,
 }
 
+/// Read the channel count out of an OpusHead block (RFC 7845 §5.1).
+/// `extra_data` from a WebM/Matroska Opus track is exactly the OpusHead.
+fn parse_opushead_channels(extra: &[u8]) -> Option<u8> {
+    if extra.len() >= 10 && &extra[..8] == b"OpusHead" {
+        Some(extra[9])
+    } else {
+        None
+    }
+}
+
 #[cfg(target_arch = "wasm32")]
 fn db_to_linear(db: f32) -> f32 {
     10.0_f32.powf(db / 20.0)
@@ -88,17 +98,19 @@ use std::sync::{Arc, Mutex};
 use wasm_bindgen::JsCast;
 
 #[cfg(not(target_arch = "wasm32"))]
-use symphonia::core::audio::{AudioBufferRef, Signal};
+use symphonia::core::audio::GenericAudioBufferRef;
 #[cfg(not(target_arch = "wasm32"))]
-use symphonia::core::codecs::{CODEC_TYPE_NULL, Decoder, DecoderOptions};
+use symphonia::core::codecs::audio::{AudioDecoder, AudioDecoderOptions};
+#[cfg(not(target_arch = "wasm32"))]
+use symphonia::core::codecs::registry::RegisterableAudioDecoder;
+#[cfg(not(target_arch = "wasm32"))]
+use symphonia::core::formats::probe::Hint;
 #[cfg(not(target_arch = "wasm32"))]
 use symphonia::core::formats::{FormatOptions, SeekMode, SeekTo};
 #[cfg(not(target_arch = "wasm32"))]
 use symphonia::core::io::MediaSourceStream;
 #[cfg(not(target_arch = "wasm32"))]
 use symphonia::core::meta::MetadataOptions;
-#[cfg(not(target_arch = "wasm32"))]
-use symphonia::core::probe::Hint;
 #[cfg(not(target_arch = "wasm32"))]
 use symphonia::core::units::Time;
 
@@ -118,16 +130,22 @@ struct CrossfadeState {
 }
 
 #[cfg(not(target_arch = "wasm32"))]
+type SharedConsumer = Arc<Mutex<rb::Consumer<f32>>>;
+
+#[cfg(not(target_arch = "wasm32"))]
+type ActiveConsumerSlot = Arc<Mutex<Option<SharedConsumer>>>;
+
+#[cfg(not(target_arch = "wasm32"))]
 pub struct Player {
     state: Arc<Mutex<PlaybackState>>,
     active_state_handle: Arc<Mutex<Arc<Mutex<PlaybackState>>>>,
     _device: cpal::Device,
     stream_config: cpal::StreamConfig,
     _stream: Option<cpal::Stream>,
-    active_consumer: Arc<Mutex<Option<Arc<Mutex<rb::Consumer<f32>>>>>>,
-    fading_consumer: Arc<Mutex<Option<Arc<Mutex<rb::Consumer<f32>>>>>>,
+    active_consumer: ActiveConsumerSlot,
+    fading_consumer: ActiveConsumerSlot,
     crossfade_state: Arc<Mutex<Option<CrossfadeState>>>,
-    ring_buf_consumer: Option<Arc<Mutex<rb::Consumer<f32>>>>,
+    ring_buf_consumer: Option<SharedConsumer>,
     ring_buf: Option<SpscRb<f32>>,
     decoder_handle: Option<std::thread::JoinHandle<()>>,
     fading_session_state: Arc<Mutex<Option<Arc<Mutex<PlaybackState>>>>>,
@@ -152,6 +170,13 @@ impl Player {
         let mut stream_config = supported_config.config();
         stream_config.buffer_size = match supported_config.buffer_size() {
             cpal::SupportedBufferSize::Range { min, max } => {
+                // Android: larger buffer for stability under thermal throttling and when the
+                // UI thread is busy (scroll, layout, image decode). ~46ms at 44.1kHz is the
+                // sweet spot — low enough latency for media controls, big enough that the OS
+                // scheduler doesn't drop frames.
+                #[cfg(target_os = "android")]
+                let target = 2048u32.clamp(*min, *max);
+                #[cfg(not(target_os = "android"))]
                 let target = 512u32.clamp(*min, *max);
                 cpal::BufferSize::Fixed(target)
             }
@@ -173,6 +198,11 @@ impl Player {
     }
 
     pub fn new() -> Self {
+        // Android initialises the JNI media session + classloader cache here; the desktop
+        // platforms set up their system integration from the app entry point instead.
+        #[cfg(target_os = "android")]
+        systemint::init();
+
         let host = cpal::default_host();
         let device = host
             .default_output_device()
@@ -242,7 +272,7 @@ impl Player {
                         .ok()
                         .and_then(|consumer| consumer.clone());
 
-                    let (active_read, read, fade_completed) = if fading_consumer.is_none() {
+                    let (_active_read, read, fade_completed) = if fading_consumer.is_none() {
                         let active_read = if let Some(consumer) = active_consumer {
                             let cons = consumer.lock().unwrap_or_else(|e| e.into_inner());
                             cons.read(data).unwrap_or(0)
@@ -336,12 +366,12 @@ impl Player {
                         if let Ok(mut fade) = stream_crossfade_state.lock() {
                             *fade = None;
                         }
-                        if let Ok(fading_state_guard) = stream_fading_session_state.lock() {
-                            if let Some(fading_state) = fading_state_guard.as_ref() {
-                                let mut st = fading_state.lock().unwrap_or_else(|e| e.into_inner());
-                                st.stopped = true;
-                                st.finished = true;
-                            }
+                        if let Ok(fading_state_guard) = stream_fading_session_state.lock()
+                            && let Some(fading_state) = fading_state_guard.as_ref()
+                        {
+                            let mut st = fading_state.lock().unwrap_or_else(|e| e.into_inner());
+                            st.stopped = true;
+                            st.finished = true;
                         }
                     }
 
@@ -361,7 +391,7 @@ impl Player {
                     }
                 },
                 move |err| {
-                    eprintln!("cpal stream error: {}", err);
+                    tracing::error!(error = %err, "cpal stream error");
                 },
                 None,
             )
@@ -404,6 +434,16 @@ impl Player {
         self.finish_callback = Some(Arc::new(f));
     }
 
+    /// Ring buffer length between the decoder thread and the audio callback.
+    /// - Desktop: 2s — plenty of headroom for big seeks and metadata stalls.
+    /// - Android: 1s — smaller heap footprint matters on phones with 2-3GB RAM,
+    ///   and a smaller buffer recovers from underruns faster.
+    #[cfg(target_os = "android")]
+    const RING_BUF_SECONDS: usize = 1;
+    #[cfg(not(target_os = "android"))]
+    const RING_BUF_SECONDS: usize = 2;
+
+    #[tracing::instrument(name = "player.play", skip_all, fields(title = %meta.title))]
     pub fn play(
         &mut self,
         source: Box<dyn symphonia::core::io::MediaSource>,
@@ -428,7 +468,8 @@ impl Player {
         let channels = self.stream_config.channels as usize;
         let device_sample_rate = self.stream_config.sample_rate;
 
-        let ring_buf_size = device_sample_rate as usize * channels * 2;
+        // Ring buffer between the decoder thread and the audio callback (see RING_BUF_SECONDS).
+        let ring_buf_size = device_sample_rate as usize * channels * Self::RING_BUF_SECONDS;
         let ring_buf = SpscRb::new(ring_buf_size);
         let (producer, consumer) = (ring_buf.producer(), ring_buf.consumer());
         let consumer = Arc::new(Mutex::new(consumer));
@@ -470,6 +511,7 @@ impl Player {
         Ok(())
     }
 
+    #[tracing::instrument(name = "player.crossfade", skip_all, fields(title = %meta.title))]
     pub fn crossfade_to(
         &mut self,
         source: Box<dyn symphonia::core::io::MediaSource>,
@@ -491,10 +533,10 @@ impl Player {
         let old_ring_buf = self.ring_buf.take();
         let old_decoder_handle = self.decoder_handle.take();
 
-        if let Some(old_consumer) = old_consumer {
-            if let Ok(mut fading_consumer) = self.fading_consumer.lock() {
-                *fading_consumer = Some(old_consumer);
-            }
+        if let Some(old_consumer) = old_consumer
+            && let Ok(mut fading_consumer) = self.fading_consumer.lock()
+        {
+            *fading_consumer = Some(old_consumer);
         }
         if let Ok(mut fading_state) = self.fading_session_state.lock() {
             *fading_state = Some(old_state);
@@ -517,7 +559,8 @@ impl Player {
 
         let channels = self.stream_config.channels as usize;
         let device_sample_rate = self.stream_config.sample_rate;
-        let ring_buf_size = device_sample_rate as usize * channels * 2;
+        // Ring buffer between the decoder thread and the audio callback (see RING_BUF_SECONDS).
+        let ring_buf_size = device_sample_rate as usize * channels * Self::RING_BUF_SECONDS;
         let ring_buf = SpscRb::new(ring_buf_size);
         let (producer, consumer) = (ring_buf.producer(), ring_buf.consumer());
         let consumer = Arc::new(Mutex::new(consumer));
@@ -639,12 +682,12 @@ impl Player {
     }
 
     fn stop_fading_session(&mut self) {
-        if let Ok(fading_state) = self.fading_session_state.lock() {
-            if let Some(state) = fading_state.as_ref() {
-                let mut st = state.lock().unwrap_or_else(|e| e.into_inner());
-                st.stopped = true;
-                st.finished = true;
-            }
+        if let Ok(fading_state) = self.fading_session_state.lock()
+            && let Some(state) = fading_state.as_ref()
+        {
+            let mut st = state.lock().unwrap_or_else(|e| e.into_inner());
+            st.stopped = true;
+            st.finished = true;
         }
         if let Ok(mut fade) = self.crossfade_state.lock() {
             *fade = None;
@@ -676,62 +719,84 @@ impl Player {
             if let Some(cb) = &finish_cb {
                 cb();
             }
+            // Android: wake the background player loop immediately so auto-advance fires
+            // without waiting for the next poll tick — this lets the loop sleep on a long
+            // idle interval instead of busy-polling while the app is backgrounded.
+            #[cfg(target_os = "android")]
+            {
+                systemint::bg_wake();
+                systemint::wake_run_loop();
+            }
         };
 
-        let probed = match symphonia::default::get_probe().format(
+        let mut format = match symphonia::default::get_probe().probe(
             &hint,
             mss,
-            &FormatOptions::default(),
-            &MetadataOptions::default(),
+            FormatOptions::default(),
+            MetadataOptions::default(),
         ) {
-            Ok(p) => p,
+            Ok(f) => f,
             Err(e) => {
-                eprintln!("symphonia probe error: {}", e);
+                tracing::error!(error = %e, "symphonia probe error");
                 finish_natural(&state);
                 return;
             }
         };
 
-        let mut format = probed.format;
-
         let track = match format
             .tracks()
             .iter()
-            .find(|t| t.codec_params.codec != CODEC_TYPE_NULL)
+            .find(|t| t.codec_params.as_ref().and_then(|p| p.audio()).is_some())
         {
             Some(t) => t,
             None => {
-                eprintln!("no supported audio tracks found");
+                tracing::error!("no supported audio tracks found");
                 finish_natural(&state);
                 return;
             }
         };
 
         let track_id = track.id;
-        let source_sample_rate = track.codec_params.sample_rate.unwrap_or(target_sample_rate);
-        let source_channels = track
+        // YouTube Music WebM/Opus streams reach the codec layer with
+        // channels empty — symphonia's matroska demuxer doesn't always
+        // propagate it, and both the built-in Opus decoder and the
+        // libopus adapter then bail with "channels required." Parse
+        // OpusHead from extra_data, or fall back to stereo at 48 kHz.
+        let mut audio_params = track
             .codec_params
-            .channels
-            .map(|c| c.count())
-            .unwrap_or(target_channels);
+            .as_ref()
+            .and_then(|p| p.audio())
+            .cloned()
+            .unwrap();
+        if audio_params.channels.is_none() {
+            let ch = audio_params
+                .extra_data
+                .as_deref()
+                .and_then(parse_opushead_channels)
+                .unwrap_or(2);
+            audio_params.channels = Some(symphonia::core::audio::Channels::Discrete(ch as u16));
+            if audio_params.sample_rate.is_none() {
+                audio_params.sample_rate = Some(48_000);
+            }
+        }
+        let source_sample_rate = audio_params.sample_rate.unwrap_or(target_sample_rate);
 
-        let mut decoder: Box<dyn symphonia::core::codecs::Decoder> =
-            match symphonia::default::get_codecs()
-                .make(&track.codec_params, &DecoderOptions::default())
-            {
+        let mut decoder: Box<dyn AudioDecoder> = match symphonia::default::get_codecs()
+            .make_audio_decoder(&audio_params, &AudioDecoderOptions::default())
+        {
+            Ok(d) => d,
+            Err(_) => match symphonia_adapter_libopus::OpusDecoder::try_registry_new(
+                &audio_params,
+                &AudioDecoderOptions::default(),
+            ) {
                 Ok(d) => d,
-                Err(_) => match symphonia_adapter_libopus::OpusDecoder::try_new(
-                    &track.codec_params,
-                    &DecoderOptions::default(),
-                ) {
-                    Ok(d) => Box::new(d),
-                    Err(e) => {
-                        eprintln!("symphonia codec error: {}", e);
-                        finish_natural(&state);
-                        return;
-                    }
-                },
-            };
+                Err(e) => {
+                    tracing::error!(error = %e, "symphonia codec error");
+                    finish_natural(&state);
+                    return;
+                }
+            },
+        };
 
         loop {
             {
@@ -742,7 +807,7 @@ impl Player {
                 }
 
                 if let Some(seek_time) = st.seek_to.take() {
-                    let time = Time::new(seek_time.as_secs(), seek_time.as_secs_f64().fract());
+                    let time = Time::try_from_secs_f64(seek_time.as_secs_f64()).unwrap_or_default();
                     let seek_to = SeekTo::Time {
                         time,
                         track_id: Some(track_id),
@@ -754,9 +819,9 @@ impl Player {
                         }));
                     match seek_result {
                         Ok(Ok(_)) => decoder.reset(),
-                        Ok(Err(e)) => eprintln!("seek error: {}", e),
+                        Ok(Err(e)) => tracing::warn!(error = %e, "seek error"),
                         Err(_) => {
-                            eprintln!(
+                            tracing::warn!(
                                 "seek panicked inside symphonia demuxer; continuing playback"
                             );
                             decoder.reset();
@@ -777,11 +842,15 @@ impl Player {
             }
 
             let packet = match format.next_packet() {
-                Ok(p) => p,
+                Ok(Some(p)) => p,
+                Ok(None) => {
+                    // Natural end of track — fire the finish callback.
+                    finish_natural(&state);
+                    return;
+                }
                 Err(symphonia::core::errors::Error::IoError(ref e))
                     if e.kind() == std::io::ErrorKind::UnexpectedEof =>
                 {
-                    // Natural end of track — fire the finish callback.
                     finish_natural(&state);
                     return;
                 }
@@ -790,24 +859,24 @@ impl Player {
                     continue;
                 }
                 Err(e) => {
-                    eprintln!("format error: {}", e);
+                    tracing::warn!(error = %e, "format error — ending track");
                     finish_natural(&state);
                     return;
                 }
             };
 
-            if packet.track_id() != track_id {
+            if packet.track_id != track_id {
                 continue;
             }
 
             let decoded = match decoder.decode(&packet) {
                 Ok(d) => d,
                 Err(symphonia::core::errors::Error::DecodeError(e)) => {
-                    eprintln!("decode error: {}", e);
+                    tracing::debug!(error = %e, "recoverable decode error — skipping packet");
                     continue;
                 }
                 Err(e) => {
-                    eprintln!("fatal decode error: {}", e);
+                    tracing::error!(error = %e, "fatal decode error");
                     finish_natural(&state);
                     return;
                 }
@@ -815,7 +884,6 @@ impl Player {
 
             let samples = Self::audio_buf_to_f32_interleaved(
                 &decoded,
-                source_channels,
                 target_channels,
                 source_sample_rate,
                 target_sample_rate,
@@ -840,133 +908,14 @@ impl Player {
     }
 
     fn audio_buf_to_f32_interleaved(
-        buf: &AudioBufferRef,
-        source_channels: usize,
+        buf: &GenericAudioBufferRef,
         target_channels: usize,
         source_sample_rate: u32,
         target_sample_rate: u32,
     ) -> Vec<f32> {
-        let frames = buf.frames();
-        let src_chans = source_channels.max(1);
-
-        let mut interleaved = Vec::with_capacity(frames * src_chans);
-
-        match buf {
-            AudioBufferRef::F32(b) => {
-                for frame in 0..frames {
-                    for ch in 0..src_chans {
-                        if ch < b.spec().channels.count() {
-                            interleaved.push(b.chan(ch)[frame]);
-                        } else {
-                            interleaved.push(0.0);
-                        }
-                    }
-                }
-            }
-            AudioBufferRef::S16(b) => {
-                for frame in 0..frames {
-                    for ch in 0..src_chans {
-                        if ch < b.spec().channels.count() {
-                            interleaved.push(b.chan(ch)[frame] as f32 / 32768.0);
-                        } else {
-                            interleaved.push(0.0);
-                        }
-                    }
-                }
-            }
-            AudioBufferRef::S32(b) => {
-                for frame in 0..frames {
-                    for ch in 0..src_chans {
-                        if ch < b.spec().channels.count() {
-                            interleaved.push(b.chan(ch)[frame] as f32 / 2147483648.0);
-                        } else {
-                            interleaved.push(0.0);
-                        }
-                    }
-                }
-            }
-            AudioBufferRef::U8(b) => {
-                for frame in 0..frames {
-                    for ch in 0..src_chans {
-                        if ch < b.spec().channels.count() {
-                            interleaved.push((b.chan(ch)[frame] as f32 - 128.0) / 128.0);
-                        } else {
-                            interleaved.push(0.0);
-                        }
-                    }
-                }
-            }
-            AudioBufferRef::F64(b) => {
-                for frame in 0..frames {
-                    for ch in 0..src_chans {
-                        if ch < b.spec().channels.count() {
-                            interleaved.push(b.chan(ch)[frame] as f32);
-                        } else {
-                            interleaved.push(0.0);
-                        }
-                    }
-                }
-            }
-            AudioBufferRef::S24(b) => {
-                for frame in 0..frames {
-                    for ch in 0..src_chans {
-                        if ch < b.spec().channels.count() {
-                            let val = b.chan(ch)[frame].0;
-                            interleaved.push(val as f32 / 8388608.0);
-                        } else {
-                            interleaved.push(0.0);
-                        }
-                    }
-                }
-            }
-            AudioBufferRef::U16(b) => {
-                for frame in 0..frames {
-                    for ch in 0..src_chans {
-                        if ch < b.spec().channels.count() {
-                            interleaved.push((b.chan(ch)[frame] as f32 - 32768.0) / 32768.0);
-                        } else {
-                            interleaved.push(0.0);
-                        }
-                    }
-                }
-            }
-            AudioBufferRef::U24(b) => {
-                for frame in 0..frames {
-                    for ch in 0..src_chans {
-                        if ch < b.spec().channels.count() {
-                            let val: u32 = b.chan(ch)[frame].0.into();
-                            interleaved.push((val as f32 - 8388608.0) / 8388608.0);
-                        } else {
-                            interleaved.push(0.0);
-                        }
-                    }
-                }
-            }
-            AudioBufferRef::U32(b) => {
-                for frame in 0..frames {
-                    for ch in 0..src_chans {
-                        if ch < b.spec().channels.count() {
-                            interleaved.push(
-                                (b.chan(ch)[frame] as f64 - 2147483648.0) as f32 / 2147483648.0,
-                            );
-                        } else {
-                            interleaved.push(0.0);
-                        }
-                    }
-                }
-            }
-            AudioBufferRef::S8(b) => {
-                for frame in 0..frames {
-                    for ch in 0..src_chans {
-                        if ch < b.spec().channels.count() {
-                            interleaved.push(b.chan(ch)[frame] as f32 / 128.0);
-                        } else {
-                            interleaved.push(0.0);
-                        }
-                    }
-                }
-            }
-        }
+        let src_chans = buf.num_planes().max(1);
+        let mut interleaved: Vec<f32> = Vec::with_capacity(buf.frames() * src_chans);
+        buf.copy_to_vec_interleaved(&mut interleaved);
 
         let interleaved = if src_chans != target_channels {
             Self::convert_channels(&interleaved, src_chans, target_channels)
@@ -1083,11 +1032,11 @@ impl Player {
             self.position_micros
                 .store(time.as_micros() as u64, Ordering::Relaxed);
 
-            if let Some(cons) = &self.ring_buf_consumer {
-                if let Ok(cons) = cons.lock() {
-                    let mut dummy = [0.0f32; 2048];
-                    while cons.read(&mut dummy).unwrap_or(0) > 0 {}
-                }
+            if let Some(cons) = &self.ring_buf_consumer
+                && let Ok(cons) = cons.lock()
+            {
+                let mut dummy = [0.0f32; 2048];
+                while cons.read(&mut dummy).unwrap_or(0) > 0 {}
             }
         }
 
@@ -1123,6 +1072,10 @@ impl Player {
     pub fn stop(&mut self) {
         self.stop_internal();
         self.now_playing = None;
+        // Tear down the Android foreground service + media notification so the OS can
+        // reclaim the process; otherwise the dismissed-notification state lingers.
+        #[cfg(target_os = "android")]
+        systemint::stop_session();
     }
 
     pub fn stop_for_transition(&mut self) {
@@ -1220,15 +1173,29 @@ impl Player {
                 meta.artwork.as_deref(),
             );
         }
+
+        #[cfg(target_os = "android")]
+        if let Some(meta) = &self.now_playing {
+            systemint::update_now_playing(
+                &meta.title,
+                &meta.artist,
+                &meta.album,
+                meta.duration.as_secs_f64(),
+                self.get_position().as_secs_f64(),
+                !self.is_paused(),
+                meta.artwork.as_deref(),
+            );
+        }
     }
 
     pub fn get_position(&self) -> Duration {
         let raw = Duration::from_micros(self.position_micros.load(Ordering::Relaxed));
 
-        if let Some(meta) = &self.now_playing {
-            if meta.duration > Duration::ZERO && raw > meta.duration {
-                return meta.duration;
-            }
+        if let Some(meta) = &self.now_playing
+            && meta.duration > Duration::ZERO
+            && raw > meta.duration
+        {
+            return meta.duration;
         }
         raw
     }

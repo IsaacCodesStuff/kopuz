@@ -1,31 +1,27 @@
-use config::{AppConfig, MusicSource, UiStyle};
+use config::{AppConfig, UiStyle};
 use dioxus::prelude::*;
-use reader::{FavoritesStore, Library, PlaylistStore};
 
-use crate::local::home::LocalHome;
-use crate::server::home::ServerHome;
+use crate::home_body::HomeBody;
 
 #[component]
 pub fn Home(
-    library: Signal<Library>,
-    playlist_store: Signal<PlaylistStore>,
-    favorites_store: Signal<FavoritesStore>,
     on_select_album: EventHandler<String>,
     on_play_album: EventHandler<String>,
     on_select_playlist: EventHandler<String>,
     on_search_artist: EventHandler<String>,
 ) -> Element {
     let mut config = use_context::<Signal<AppConfig>>();
-    let is_server = config.read().active_source == MusicSource::Server;
     let is_modern = config.read().ui_style == UiStyle::Modern;
     let mut edit_mode = use_signal(|| false);
 
     rsx! {
         div {
-            class: if is_modern {
-                "px-6 pt-4 pb-24 w-full max-w-[1600px] mx-auto"
+            class: if cfg!(target_os = "android") {
+                "px-4 pt-2 pb-28 space-y-8 w-full"
+            } else if is_modern {
+                "px-6 pt-4 pb-24 w-full"
             } else {
-                "p-8 space-y-12 pb-32 animate-fade-in w-full max-w-[1600px] mx-auto"
+                "p-8 space-y-12 pb-32 animate-fade-in w-full"
             },
 
             div { class: "flex items-center justify-between mb-4",
@@ -61,28 +57,12 @@ pub fn Home(
                 }
             }
 
-            if is_server {
-                ServerHome {
-                    library,
-                    playlist_store,
-                    favorites_store,
-                    edit_mode,
-                    on_select_album,
-                    on_play_album,
-                    on_select_playlist,
-                    on_search_artist,
-                }
-            } else {
-                LocalHome {
-                    library,
-                    playlist_store,
-                    favorites_store,
-                    edit_mode,
-                    on_select_album,
-                    on_play_album,
-                    on_select_playlist,
-                    on_search_artist,
-                }
+            HomeBody {
+                edit_mode,
+                on_select_album,
+                on_play_album,
+                on_select_playlist,
+                on_search_artist,
             }
         }
     }

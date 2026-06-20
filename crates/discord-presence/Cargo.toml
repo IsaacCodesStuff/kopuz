@@ -3,13 +3,20 @@ name = "discord-presence"
 version.workspace = true
 edition = "2024"
 
+[lints]
+workspace = true
+
 [dependencies]
 tokio.workspace = true
 reqwest.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 tracing.workspace = true
+utils.workspace = true
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
-discord-rich-presence.workspace = true
 reader.workspace = true
+
+# Discord IPC has no meaning on Android, so the real client is desktop-only.
+[target.'cfg(all(not(target_arch = "wasm32"), not(target_os = "android")))'.dependencies]
+discord-rich-presence.workspace = true

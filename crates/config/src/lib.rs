@@ -1,6 +1,5 @@
 use serde::{Deserialize, Deserializer, Serialize};
 use std::collections::HashMap;
-use std::fs;
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Default)]
 pub enum FetchStrategy {
@@ -31,7 +30,6 @@ pub fn default_radio_registries() -> Vec<RegistryEntry> {
         is_default: true,
     }]
 }
-
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct YtdlpOptions {
     #[serde(default = "default_true")]
@@ -134,29 +132,60 @@ pub struct CustomTheme {
     pub name: String,
     pub vars: HashMap<String, String>,
 }
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
-#[derive(Debug, Copy, Clone, Serialize, Deserialize, PartialEq, Default)]
-pub enum MusicSource {
+/// Where a track/playlist/favorite comes from, and what the app is currently
+/// sourcing from: the local library, or a specific media server (carrying its
+/// id). One type-safe serde value — the old `MusicSource` mode plus the separate
+/// `active_server_id` string, collapsed. The DB persists it as the `source`
+/// column (`"local"` or the server id) and re-exports this type.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash, Default)]
+pub enum Source {
     #[default]
     Local,
-    #[serde(alias = "Jellyfin")]
-    Server,
+    Server(String),
 }
 
-impl MusicSource {
-    pub fn is_server(&self) -> bool {
-        matches!(self, Self::Server)
+impl Source {
+    /// The `source` column value: `"local"` or the server id.
+    pub fn as_str(&self) -> &str {
+        match self {
+            Source::Local => "local",
+            Source::Server(id) => id.as_str(),
+        }
+    }
+
+    /// Build from a stored `source` column value.
+    pub fn from_column(s: &str) -> Self {
+        if s == "local" {
+            Source::Local
+        } else {
+            Source::Server(s.to_owned())
+        }
+    }
+
+    /// The server id, if this is a server source.
+    pub fn server_id(&self) -> Option<&str> {
+        match self {
+            Source::Server(id) => Some(id),
+            Source::Local => None,
+        }
     }
 }
 
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Default)]
+// Source capabilities now live on the `MediaSource` trait (`server::source::
+// Capabilities`): each impl declares its own, so the UI reads them off the
+// resolved source instead of a central `match`. (Was `config::SourceCaps`.)
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Hash, Default)]
 pub enum MusicService {
     #[default]
     Jellyfin,
     #[serde(alias = "Navidrome")]
     Subsonic,
     Custom,
+    YtMusic,
+    SoundCloud,
 }
 
 impl MusicService {
@@ -165,7 +194,15 @@ impl MusicService {
             Self::Jellyfin => "Jellyfin",
             Self::Subsonic => "Subsonic",
             Self::Custom => "Custom",
+            Self::YtMusic => "YouTube Music",
+            Self::SoundCloud => "SoundCloud",
         }
+    }
+
+    /// Backends that authenticate via a browser sign-in window (OAuth/cookies)
+    /// rather than a URL + username/password form.
+    pub fn uses_browser_signin(&self) -> bool {
+        matches!(self, Self::YtMusic | Self::SoundCloud)
     }
 }
 
@@ -492,10 +529,6 @@ pub fn default_home_sections() -> Vec<HomeSection> {
         .collect()
 }
 
-fn default_recently_played_limit() -> usize {
-    50
-}
-
 fn default_hero_height() -> u32 {
     300
 }
@@ -506,8 +539,16 @@ pub struct AppConfig {
     pub server: Option<MusicServer>,
     #[serde(default)]
     pub servers: Vec<SavedServer>,
+    /// Id of the active server (`servers.id`), or `None` for local. The DB-backed
+    /// source of truth for "which server is active"; `server`/`servers` above are
+    /// hydrated from the `servers` table around it. (`server` stays for now so the
+    /// ~90 existing `config.server` readers keep working — they migrate to id-based
+    /// resolution with the auth-gate work.)
+    /// The active source: `Local` or `Server(id)`. Single source of truth for
+    /// "which source/server is active" — `server`/`servers` above are hydrated
+    /// from the `servers` table around it.
     #[serde(default)]
-    pub active_source: MusicSource,
+    pub active_source: Source,
     #[serde(default)]
     pub source_explicitly_set: bool,
     #[serde(default, deserialize_with = "deserialize_music_directories")]
@@ -518,6 +559,8 @@ pub struct AppConfig {
     pub device_id: String,
     #[serde(default = "default_discord_presence")]
     pub discord_presence: Option<bool>,
+    #[serde(default = "default_discord_presence_paused")]
+    pub discord_presence_paused: Option<bool>,
     #[serde(default = "default_sort_order")]
     pub sort_order: SortOrder,
     #[serde(default = "default_artist_view_order")]
@@ -532,12 +575,27 @@ pub struct AppConfig {
     pub lastfm_api_secret: String,
     #[serde(default)]
     pub lastfm_session_key: String,
+    #[serde(default)]
+    pub librefm_api_key: String,
+    #[serde(default)]
+    pub librefm_api_secret: String,
+    #[serde(default)]
+    pub librefm_session_key: String,
     #[serde(default = "default_language")]
     pub language: String,
     #[serde(default)]
     pub reduce_animations: bool,
+    /// Opt-in chrome/Perfetto performance trace. Read at startup (the
+    /// subscriber is built once), so a change needs a restart. Adds runtime
+    /// overhead — surfaced with a warning in settings.
+    #[serde(default)]
+    pub tracing_enabled: bool,
     #[serde(default = "default_auto_check_updates")]
     pub auto_check_updates: bool,
+    /// Desktop-only: when enabled, closing the window hides it to the system
+    /// tray instead of quitting, so playback keeps running in the background.
+    #[serde(default)]
+    pub minimize_to_tray: bool,
     #[serde(default = "default_show_source_toggle")]
     pub show_source_toggle: bool,
     #[serde(default = "default_sidebar_order")]
@@ -577,10 +635,6 @@ pub struct AppConfig {
     #[serde(default = "default_home_sections")]
     pub home_sections: Vec<HomeSection>,
     #[serde(default)]
-    pub recently_played: Vec<String>,
-    #[serde(default)]
-    pub recently_played_server: Vec<String>,
-    #[serde(default)]
     pub listen_now_style: ListenNowStyle,
     #[serde(default)]
     pub artist_photo_source: ArtistPhotoSource,
@@ -590,6 +644,10 @@ pub struct AppConfig {
     pub cover_fetch_strategy: FetchStrategy,
     #[serde(default = "default_radio_registries")]
     pub radio_registries: Vec<RegistryEntry>,
+    #[serde(default)]
+    pub prefer_local_lyrics: bool,
+    #[serde(default)]
+    pub enable_musixmatch_lyrics: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -602,6 +660,71 @@ pub struct MusicServer {
     pub user_id: Option<String>,
     #[serde(default)]
     pub id: Option<String>,
+    /// For `MusicService::YtMusic` only: which Chromium-family browser
+    /// the cookies were extracted from. Lets boot-time refresh hit the
+    /// right browser directly instead of falling through every
+    /// candidate.
+    #[serde(default)]
+    pub yt_browser: Option<Browser>,
+    /// For `MusicService::YtMusic` only: anonymous mode — no sign-in,
+    /// no cookies. Browse + play public surfaces work; Liked / Library
+    /// Playlists / follow / like are disabled. Set when the user picks
+    /// "Continue without signing in" (the only option on Windows for
+    /// now — see isolated_profile.rs).
+    #[serde(default)]
+    pub yt_anonymous: bool,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum Browser {
+    Chrome,
+    Chromium,
+    Brave,
+    Edge,
+    Vivaldi,
+}
+
+impl Browser {
+    pub const ALL: &'static [Browser] = &[
+        Browser::Chrome,
+        Browser::Chromium,
+        Browser::Brave,
+        Browser::Edge,
+        Browser::Vivaldi,
+    ];
+
+    /// The stable id used in URL routes, settings UI option values,
+    /// libsecret lookups, etc.
+    pub fn id(self) -> &'static str {
+        match self {
+            Browser::Chrome => "chrome",
+            Browser::Chromium => "chromium",
+            Browser::Brave => "brave",
+            Browser::Edge => "edge",
+            Browser::Vivaldi => "vivaldi",
+        }
+    }
+
+    pub fn label(self) -> &'static str {
+        match self {
+            Browser::Chrome => "Chrome",
+            Browser::Chromium => "Chromium",
+            Browser::Brave => "Brave",
+            Browser::Edge => "Edge",
+            Browser::Vivaldi => "Vivaldi",
+        }
+    }
+
+    pub fn from_id(s: &str) -> Option<Browser> {
+        Browser::ALL.iter().copied().find(|b| b.id() == s)
+    }
+}
+
+impl std::fmt::Display for Browser {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(self.label())
+    }
 }
 
 pub type JellyfinServer = MusicServer;
@@ -620,7 +743,13 @@ impl MusicServer {
             access_token: None,
             user_id: None,
             id: Some(uuid::Uuid::new_v4().to_string()),
+            yt_browser: None,
+            yt_anonymous: false,
         }
+    }
+
+    pub fn yt_browser(&self) -> Option<Browser> {
+        self.yt_browser
     }
 }
 
@@ -631,6 +760,16 @@ pub struct SavedServer {
     pub url: String,
     #[serde(default)]
     pub service: MusicService,
+    /// Persisted browser choice for YT Music servers — without this, a
+    /// "switch to YT" click re-runs the sign-in flow against whatever
+    /// the popup's default browser was (Chrome) instead of the one the
+    /// user actually has installed.
+    #[serde(default)]
+    pub yt_browser: Option<Browser>,
+    /// Persisted anonymous-mode flag — when true a "switch to YT"
+    /// click skips the sign-in launch entirely and runs anonymously.
+    #[serde(default)]
+    pub yt_anonymous: bool,
 }
 
 impl SavedServer {
@@ -640,14 +779,16 @@ impl SavedServer {
             name,
             url: url.trim_end_matches('/').to_string(),
             service,
+            yt_browser: None,
+            yt_anonymous: false,
         }
     }
 
     pub fn matches(&self, server: &MusicServer) -> bool {
-        if let Some(sid) = server.id.as_ref() {
-            if sid == &self.id {
-                return true;
-            }
+        if let Some(sid) = server.id.as_ref()
+            && sid == &self.id
+        {
+            return true;
         }
         self.url == server.url && self.service == server.service
     }
@@ -662,6 +803,10 @@ fn default_device_id() -> String {
 }
 
 fn default_discord_presence() -> Option<bool> {
+    Some(true)
+}
+
+fn default_discord_presence_paused() -> Option<bool> {
     Some(true)
 }
 
@@ -680,8 +825,6 @@ fn default_show_source_toggle() -> bool {
 fn default_auto_check_updates() -> bool {
     true
 }
-
-
 
 pub fn default_sidebar_order() -> Vec<String> {
     vec![
@@ -738,12 +881,13 @@ impl Default for AppConfig {
         Self {
             server: None,
             servers: Vec::new(),
-            active_source: MusicSource::Local,
+            active_source: Source::Local,
             source_explicitly_set: false,
             music_directory: vec![music_directory],
             theme: default_theme(),
             device_id: default_device_id(),
             discord_presence: Some(true),
+            discord_presence_paused: Some(true),
             sort_order: default_sort_order(),
             artist_view_order: default_artist_view_order(),
             listen_counts: HashMap::new(),
@@ -751,9 +895,14 @@ impl Default for AppConfig {
             lastfm_api_key: String::new(),
             lastfm_api_secret: String::new(),
             lastfm_session_key: String::new(),
+            librefm_api_key: String::new(),
+            librefm_api_secret: String::new(),
+            librefm_session_key: String::new(),
             language: default_language(),
             reduce_animations: false,
+            tracing_enabled: false,
             auto_check_updates: default_auto_check_updates(),
+            minimize_to_tray: false,
             show_source_toggle: default_show_source_toggle(),
             sidebar_order: default_sidebar_order(),
             volume: default_volume(),
@@ -773,13 +922,13 @@ impl Default for AppConfig {
             ui_style: UiStyle::Normal,
             hero_height: default_hero_height(),
             home_sections: default_home_sections(),
-            recently_played: Vec::new(),
-            recently_played_server: Vec::new(),
             listen_now_style: ListenNowStyle::default(),
             artist_photo_source: ArtistPhotoSource::AlbumCover,
             auto_fetch_covers: false,
             cover_fetch_strategy: FetchStrategy::default(),
             radio_registries: default_radio_registries(),
+            prefer_local_lyrics: false,
+            enable_musixmatch_lyrics: false,
         }
     }
 }
@@ -805,10 +954,10 @@ impl AppConfig {
     }
 
     pub fn migrate_servers(&mut self) {
-        if let Some(server) = self.server.as_mut() {
-            if server.id.is_none() {
-                server.id = Some(uuid::Uuid::new_v4().to_string());
-            }
+        if let Some(server) = self.server.as_mut()
+            && server.id.is_none()
+        {
+            server.id = Some(uuid::Uuid::new_v4().to_string());
         }
         if let Some(server) = self.server.clone() {
             let already = self.servers.iter().any(|s| s.matches(&server));
@@ -822,6 +971,8 @@ impl AppConfig {
                     name: server.name.clone(),
                     url: server.url.clone(),
                     service: server.service,
+                    yt_browser: server.yt_browser,
+                    yt_anonymous: server.yt_anonymous,
                 });
             }
         }
@@ -835,10 +986,10 @@ impl AppConfig {
 
     pub fn remove_saved_server(&mut self, id: &str) {
         self.servers.retain(|s| s.id != id);
-        if let Some(active) = &self.server {
-            if active.id.as_deref() == Some(id) {
-                self.server = None;
-            }
+        if let Some(active) = &self.server
+            && active.id.as_deref() == Some(id)
+        {
+            self.server = None;
         }
     }
 
@@ -869,20 +1020,6 @@ impl AppConfig {
             );
         }
     }
-
-    pub fn push_recent(&mut self, id: String, server: bool) {
-        let list = if server {
-            &mut self.recently_played_server
-        } else {
-            &mut self.recently_played
-        };
-        list.retain(|x| x != &id);
-        list.insert(0, id);
-        let limit = default_recently_played_limit();
-        if list.len() > limit {
-            list.truncate(limit);
-        }
-    }
 }
 
 impl Default for MusicServer {
@@ -894,67 +1031,31 @@ impl Default for MusicServer {
             access_token: None,
             user_id: None,
             id: None,
+            yt_browser: None,
+            yt_anonymous: false,
         }
     }
 }
 
 impl AppConfig {
     pub fn active_service(&self) -> Option<MusicService> {
-        if self.active_source.is_server() {
-            self.server.as_ref().map(|server| server.service)
-        } else {
-            None
-        }
+        self.active_source.server_id()?;
+        self.server.as_ref().map(|server| server.service)
     }
 
     pub fn uses_jellyfin_server(&self) -> bool {
         self.active_service() == Some(MusicService::Jellyfin)
     }
 
-    pub fn load(path: &Path) -> Self {
-        if !path.exists() {
-            return Self::default();
-        }
-        match fs::read_to_string(path) {
-            Ok(data) => match serde_json::from_str::<Self>(&data) {
-                Ok(mut config) => {
-                    config.migrate_home_sections();
-                    config.migrate_sidebar_order();
-                    config.migrate_registry_paths();
-                    config.migrate_servers();
-                    config
-                }
-                Err(e) => {
-                    eprintln!("Failed to parse config at {:?}: {}", path, e);
-                    Self::default()
-                }
-            },
-            Err(e) => {
-                eprintln!("Failed to read config at {:?}: {}", path, e);
-                Self::default()
-            }
-        }
-    }
-
-    pub fn save(&self, path: &Path) -> std::io::Result<()> {
-        if let Some(parent) = path.parent() {
-            if let Err(e) = fs::create_dir_all(parent) {
-                eprintln!("Failed to create config directory {:?}: {}", parent, e);
-                return Err(e);
-            }
-        }
-        let data = match serde_json::to_string_pretty(self) {
-            Ok(d) => d,
-            Err(e) => {
-                eprintln!("Failed to serialize config: {}", e);
-                return Err(std::io::Error::new(std::io::ErrorKind::Other, e));
-            }
-        };
-        if let Err(e) = fs::write(path, data) {
-            eprintln!("Failed to write config to {:?}: {}", path, e);
-            return Err(e);
-        }
-        Ok(())
+    /// The server to activate when toggling into server mode: the current server
+    /// if already on one, else the first saved server. `None` ⇒ no servers, so
+    /// the toggle is a no-op.
+    pub fn server_toggle_target(&self) -> Option<Source> {
+        self.active_source
+            .server_id()
+            .map(String::from)
+            .or_else(|| self.servers.first().map(|s| s.id.clone()))
+            .map(Source::Server)
     }
 }
 

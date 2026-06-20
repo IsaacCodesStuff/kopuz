@@ -1,6 +1,5 @@
-use config::MusicSource;
 #[cfg(all(not(target_arch = "wasm32"), target_os = "macos"))]
-use dioxus::desktop::use_window;
+use dioxus::desktop::window;
 use dioxus::prelude::*;
 use kopuz_route::Route;
 
@@ -13,7 +12,7 @@ struct SidebarItem {
     icon: &'static str,
 }
 
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(all(not(target_arch = "wasm32"), not(target_os = "android")))]
 const TOP_MENU: &[SidebarItem] = &[
     SidebarItem {
         key: "home",
@@ -24,6 +23,11 @@ const TOP_MENU: &[SidebarItem] = &[
         key: "search",
         route: Route::Search,
         icon: "fa-solid fa-magnifying-glass",
+    },
+    SidebarItem {
+        key: "discover",
+        route: Route::Discover,
+        icon: "fa-solid fa-compass",
     },
     SidebarItem {
         key: "library",
@@ -67,6 +71,60 @@ const TOP_MENU: &[SidebarItem] = &[
     },
 ];
 
+#[cfg(target_os = "android")]
+const TOP_MENU: &[SidebarItem] = &[
+    SidebarItem {
+        key: "home",
+        route: Route::Home,
+        icon: "fa-solid fa-house",
+    },
+    SidebarItem {
+        key: "search",
+        route: Route::Search,
+        icon: "fa-solid fa-magnifying-glass",
+    },
+    SidebarItem {
+        key: "discover",
+        route: Route::Discover,
+        icon: "fa-solid fa-compass",
+    },
+    SidebarItem {
+        key: "library",
+        route: Route::Library,
+        icon: "fa-solid fa-book",
+    },
+    SidebarItem {
+        key: "albums",
+        route: Route::Album,
+        icon: "fa-solid fa-music",
+    },
+    SidebarItem {
+        key: "artists",
+        route: Route::Artist,
+        icon: "fa-solid fa-user",
+    },
+    SidebarItem {
+        key: "playlists",
+        route: Route::Playlists,
+        icon: "fa-solid fa-list",
+    },
+    SidebarItem {
+        key: "favorites",
+        route: Route::Favorites,
+        icon: "fa-solid fa-heart",
+    },
+    SidebarItem {
+        key: "radio",
+        route: Route::Radio,
+        icon: "fa-solid fa-radio",
+    },
+    SidebarItem {
+        key: "activity",
+        route: Route::Activity,
+        icon: "fa-solid fa-chart-simple",
+    },
+];
+
 #[cfg(target_arch = "wasm32")]
 const TOP_MENU: &[SidebarItem] = &[
     SidebarItem {
@@ -78,6 +136,11 @@ const TOP_MENU: &[SidebarItem] = &[
         key: "search",
         route: Route::Search,
         icon: "fa-solid fa-magnifying-glass",
+    },
+    SidebarItem {
+        key: "discover",
+        route: Route::Discover,
+        icon: "fa-solid fa-compass",
     },
     SidebarItem {
         key: "library",
@@ -129,6 +192,12 @@ pub fn SidebarNormal(props: SidebarProps) -> Element {
     let mut is_collapsed = use_signal(|| false);
     let mut is_resizing = use_signal(|| false);
 
+    let is_android = cfg!(target_os = "android");
+    let fallback_collapse = use_signal(|| true);
+    let mut mobile_collapsed = try_consume_context::<crate::sidebar::SidebarCollapsed>()
+        .map(|c| c.0)
+        .unwrap_or(fallback_collapse);
+
     let current_width = if *is_collapsed.read() {
         72
     } else {
@@ -162,24 +231,10 @@ pub fn SidebarNormal(props: SidebarProps) -> Element {
     let is_rtl = i18n::is_rtl();
     let border_side = if is_rtl { "border-l" } else { "border-r" };
 
-    let is_server = config.read().active_source == MusicSource::Server;
-    let local_class = if !is_server {
-        "text-white"
-    } else {
-        "text-slate-500 hover:text-slate-300"
-    };
-    let server_class = if is_server {
-        "text-white"
-    } else {
-        "text-slate-500 hover:text-slate-300"
-    };
-    let slider_style = match (is_rtl, is_server) {
-        (false, false) => "left: 4px; width: calc(50% - 4px);",
-        (false, true) => "left: calc(50% + 2px); width: calc(50% - 4px);",
-        (true, false) => "right: 4px; width: calc(50% - 4px);",
-        (true, true) => "right: calc(50% + 2px); width: calc(50% - 4px);",
-    };
-
+    // Discover is a capability of the active source (YT), not a config flag —
+    // hide the tab when the active source has no discover surface.
+    let active_source = use_context::<Signal<::server::source::ActiveSource>>();
+    let has_discover = use_memo(move || active_source.read().capabilities().discover);
     let ordered_items: Vec<SidebarItem> = {
         let order = config.read().sidebar_order.clone();
         let mut items: Vec<SidebarItem> = order
@@ -191,11 +246,30 @@ pub fn SidebarNormal(props: SidebarProps) -> Element {
                 items.push(item.clone());
             }
         }
+        items.retain(|item| item.route != Route::Discover || has_discover());
         items
     };
 
     let _item_count = ordered_items.len();
     let order_len = config.read().sidebar_order.len();
+
+    let root_class = if is_android {
+        "h-full bg-[#0a0a0a]/97 text-slate-400 flex flex-col flex-shrink-0 select-none relative border-r border-white/10 overflow-hidden transition-all duration-300 ease-out".to_string()
+    } else {
+        format!(
+            "h-full bg-black/40 text-slate-400 flex flex-col flex-shrink-0 select-none relative {border_side} border-white/5 {extra_padding}"
+        )
+    };
+    let root_style = if is_android {
+        if *mobile_collapsed.read() {
+            "position: fixed; left: 0; top: 0; z-index: 100; height: 100%; width: 0px;".to_string()
+        } else {
+            "position: fixed; left: 0; top: 0; z-index: 100; height: 100%; width: 280px;"
+                .to_string()
+        }
+    } else {
+        format!("width: {current_width}px")
+    };
 
     rsx! {
         if *is_resizing.read() {
@@ -206,16 +280,40 @@ pub fn SidebarNormal(props: SidebarProps) -> Element {
             }
         }
 
+        if is_android && !*mobile_collapsed.read() {
+            div {
+                class: "fixed inset-0 bg-black/80 backdrop-blur-[2px] z-[90]",
+                onclick: move |_| mobile_collapsed.set(true),
+            }
+        }
+
         div {
-            class: "h-full bg-black/40 text-slate-400 flex flex-col flex-shrink-0 select-none relative {border_side} border-white/5 {extra_padding}",
-            style: "width: {current_width}px",
+            class: "{root_class}",
+            style: "{root_style}",
+
+            if is_android {
+                div {
+                    class: "flex items-center justify-between px-5 border-b border-white/5 bg-white/5 shrink-0",
+                    style: "padding-top: max(env(safe-area-inset-top), 16px); padding-bottom: 16px;",
+                    h2 {
+                        class: "text-base font-bold tracking-widest text-white/90 uppercase",
+                        style: "font-family: 'JetBrains Mono', monospace;",
+                        "KOPUZ"
+                    }
+                    button {
+                        class: "p-2 rounded-xl bg-white/10 text-white active:scale-95 transition-all flex items-center justify-center border border-white/10 w-9 h-9",
+                        onclick: move |_| mobile_collapsed.set(true),
+                        i { class: "fa-solid fa-xmark text-base" }
+                    }
+                }
+            }
 
             if cfg!(all(not(target_arch = "wasm32"), target_os = "macos")) {
                 div {
                     class: "absolute top-0 left-0 w-full h-10 z-50",
                     onmousedown: move |_| {
                         #[cfg(all(not(target_arch = "wasm32"), target_os = "macos"))]
-                        use_window().drag();
+                        window().drag();
                     }
                 }
             }
@@ -224,33 +322,9 @@ pub fn SidebarNormal(props: SidebarProps) -> Element {
                 class: "flex-1 flex flex-col overflow-y-auto overflow-x-hidden pt-2",
 
                 if !*is_collapsed.read() && !cfg!(target_arch = "wasm32") && config.read().show_source_toggle {
-                    div {
-                        class: "px-4 mb-6",
-                        div {
-                            class: "bg-white/5 p-1 rounded-xl flex relative h-10 items-center border border-white/5",
-                            div {
-                                class: "absolute h-8 bg-white/10 rounded-lg transition-all duration-300 ease-out",
-                                style: "{slider_style}"
-                            }
-                            button {
-                                class: "flex-1 text-[11px] font-bold z-10 transition-colors duration-300 {local_class}",
-                                onclick: move |_| {
-                                    let mut cfg = config.write();
-                                    cfg.active_source = MusicSource::Local;
-                                    cfg.source_explicitly_set = true;
-                                },
-                                "{i18n::t(\"local\").to_uppercase()}"
-                            }
-                            button {
-                                class: "flex-1 text-[11px] font-bold z-10 transition-colors duration-300 {server_class}",
-                                onclick: move |_| {
-                                    let mut cfg = config.write();
-                                    cfg.active_source = MusicSource::Server;
-                                    cfg.source_explicitly_set = true;
-                                },
-                                "{i18n::t(\"server\").to_uppercase()}"
-                            }
-                        }
+                    crate::source_switcher::SourceSwitcher {
+                        config,
+                        on_manage: move |_| props.on_navigate.call(Route::Settings),
                     }
                 }
 
@@ -265,7 +339,10 @@ pub fn SidebarNormal(props: SidebarProps) -> Element {
                             is_rtl,
                             can_move_up: idx > 0 && idx < order_len,
                             can_move_down: idx + 1 < order_len,
-                            onclick: move |_| props.on_navigate.call(item.route),
+                            onclick: move |_| {
+                                props.on_navigate.call(item.route);
+                                if is_android { mobile_collapsed.set(true); }
+                            },
                             on_move_up: move |_| {
                                 let mut order = config.peek().sidebar_order.clone();
                                 if idx > 0 {
@@ -291,7 +368,10 @@ pub fn SidebarNormal(props: SidebarProps) -> Element {
                             is_rtl,
                             can_move_up: false,
                             can_move_down: false,
-                            onclick: move |_| props.on_navigate.call(item.route),
+                            onclick: move |_| {
+                                props.on_navigate.call(item.route);
+                                if is_android { mobile_collapsed.set(true); }
+                            },
                             on_move_up: move |_| {},
                             on_move_down: move |_| {},
                         }

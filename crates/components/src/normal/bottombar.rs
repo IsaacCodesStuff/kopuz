@@ -3,14 +3,11 @@ use config::PlayerBarPosition;
 use dioxus::prelude::*;
 use hooks::use_player_controller::{LoopMode, PlayerController};
 use player::player::Player;
-use reader::{FavoritesStore, Library};
 
-use crate::shared::{fmt_time, get_favorite, toggle_favorite};
+use crate::shared::{fmt_time, toggle_favorite};
 
 #[component]
 pub fn BottombarNormal(
-    library: Signal<Library>,
-    favorites_store: Signal<FavoritesStore>,
     mut config: Signal<config::AppConfig>,
     mut player: Signal<Player>,
     mut is_playing: Signal<bool>,
@@ -53,10 +50,55 @@ pub fn BottombarNormal(
 
     let volume_percent = *volume.read() * 100.0;
     let mut ctrl = use_context::<PlayerController>();
+    let active_source = use_context::<Signal<::server::source::ActiveSource>>();
     let nav_ctrl = use_context::<NavigationController>();
+    let fav_track = use_memo(move || ctrl.current_track_snapshot.read().clone());
+    let is_fav = hooks::use_db_queries::use_track_is_favorite(fav_track);
+    let crate::CompactMode(mut compact_mode) = use_context::<crate::CompactMode>();
+
+    if cfg!(target_os = "android") {
+        let progress_percent = if *current_song_duration.read() > 0 {
+            (*current_song_progress.read() as f64 / *current_song_duration.read() as f64) * 100.0
+        } else {
+            0.0
+        };
+        let cover = current_song_cover_url.read().clone();
+        return rsx! {
+            div {
+                class: "shrink-0 mx-2 mb-[env(safe-area-inset-bottom)] h-[68px] bg-[#121212]/95 backdrop-blur-3xl border border-white/10 rounded-[24px] flex items-center px-3 gap-3 relative overflow-hidden shadow-[0_12px_40px_rgba(0,0,0,0.8)]",
+                onclick: move |_| is_fullscreen.set(true),
+                div { class: "absolute top-0 left-0 h-[2px] bg-white/10 w-full",
+                    div { class: "h-full bg-white transition-all duration-300", style: "width: {progress_percent}%" }
+                }
+                div { class: "w-11 h-11 bg-white/5 rounded-xl shrink-0 overflow-hidden flex items-center justify-center",
+                    if cover.is_empty() {
+                        i { class: "fa-solid fa-music text-white/20" }
+                    } else {
+                        img { src: "{cover}", class: "w-full h-full object-cover" }
+                    }
+                }
+                div { class: "flex-1 min-w-0 flex flex-col justify-center gap-0.5",
+                    span { class: "text-[13px] font-bold text-white truncate leading-tight", "{current_song_title}" }
+                    span { class: "text-[11px] font-medium text-white/60 truncate leading-tight", "{current_song_artist}" }
+                }
+                div { class: "flex items-center gap-1 pr-1",
+                    button {
+                        class: "w-12 h-12 flex items-center justify-center text-white text-xl active:scale-90 transition-transform",
+                        onclick: move |evt| { evt.stop_propagation(); ctrl.toggle(); },
+                        i { class: if *is_playing.read() { "fa-solid fa-pause" } else { "fa-solid fa-play ml-1" } }
+                    }
+                    button {
+                        class: "w-12 h-12 flex items-center justify-center text-white text-lg active:scale-90 transition-transform",
+                        onclick: move |evt| { evt.stop_propagation(); ctrl.play_next(); },
+                        i { class: "fa-solid fa-forward-step" }
+                    }
+                }
+            }
+        };
+    }
 
     let current_track_snapshot = ctrl.current_track_snapshot.read().clone();
-    let is_favorite = get_favorite(current_track_snapshot.as_ref(), &favorites_store);
+    let is_favorite = is_fav();
     let heart_class = if is_favorite {
         "ml-2 text-red-400 hover:text-red-300 transition-colors"
     } else {
@@ -119,7 +161,7 @@ pub fn BottombarNormal(
                 button {
                     class: "{heart_class}",
                     title: if is_favorite { i18n::t("remove_from_favorites").to_string() } else { i18n::t("add_to_favorites").to_string() },
-                    onclick: move |_| toggle_favorite(ctrl.current_track_snapshot.read().clone(), favorites_store, config),
+                    onclick: move |_| toggle_favorite(ctrl.current_track_snapshot.read().clone()),
                     i { class: "{heart_icon}" }
                 }
             }
@@ -284,6 +326,25 @@ pub fn BottombarNormal(
                     class: "text-slate-400 hover:text-white",
                     onclick: move |_| { let c = *is_rightbar_open.read(); is_rightbar_open.set(!c); },
                     i { class: "fa-solid fa-list text-xs" }
+                }
+                button {
+                    class: "text-slate-400 hover:text-white",
+                    title: i18n::t("share_musicbrainz").to_string(),
+                    onclick: move |_| {
+                        if let Some(t) = ctrl.current_track_snapshot.read().clone() {
+                            let src = active_source.peek().clone();
+                            crate::track_row::share_track(t, src);
+                        }
+                    },
+                    i { class: "fa-solid fa-share-nodes text-xs" }
+                }
+                if cfg!(all(not(target_arch = "wasm32"), not(target_os = "android"))) {
+                    button {
+                        class: "text-slate-400 hover:text-white",
+                        title: i18n::t("mini_player").to_string(),
+                        onclick: move |_| { let c = *compact_mode.read(); compact_mode.set(!c); },
+                        i { class: "fa-solid fa-compress text-xs" }
+                    }
                 }
                 button {
                     class: "text-slate-400 hover:text-white",

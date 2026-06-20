@@ -4,6 +4,7 @@
   craneLib,
   pkg-config,
   cmake,
+  git,
   openssl,
   tailwindcss_4,
   dioxus-cli,
@@ -19,18 +20,20 @@
   xdotool,
   wayland,
   dbus,
+  libayatana-appindicator,
   # Darwin deps
   libopus,
 }:
 let
   pname = "kopuz";
-  version = "0.6.5";
+  version = "0.6.7";
 
   nativeBuildInputs = [
     pkg-config
     cmake
     tailwindcss_4
     dioxus-cli
+    git
   ]
   ++ lib.optionals stdenv.isLinux [ wrapGAppsHook3 ];
 
@@ -47,6 +50,7 @@ let
     xdotool
     wayland
     dbus
+    libayatana-appindicator
     libopus
   ];
 
@@ -146,6 +150,7 @@ craneLib.mkCargoDerivation (
       gappsWrapperArgs+=(
         --chdir $out/bin
         --prefix PATH : ${lib.makeBinPath [ yt-dlp ]}
+        --prefix LD_LIBRARY_PATH : ${libayatana-appindicator}/lib
       )
     '';
 

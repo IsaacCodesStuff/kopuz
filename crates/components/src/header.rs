@@ -8,10 +8,7 @@ fn icon_class(
     field: SortField,
 ) -> String {
     if sort_state.is_some() {
-        format!(
-            "{}",
-            showcase::sort_icon(*sort_state.unwrap().read(), field)
-        )
+        showcase::sort_icon(*sort_state.unwrap().read(), field).to_string()
     } else {
         "".to_string()
     }
@@ -72,8 +69,8 @@ pub fn Header(
                 button {
                     class: "flex items-center gap-1 uppercase tracking-widest text-left hover:text-white transition-colors",
                     onclick: move |_| {
-                        if sort_state.is_some() {
-                            showcase::toggle_sort_state(sort_state.unwrap(), SortField::Title);
+                        if let Some(sort_state) = sort_state {
+                            showcase::toggle_sort_state(sort_state, SortField::Title);
                         }
                     },
                     "{i18n::t(\"title\")}"
@@ -82,8 +79,8 @@ pub fn Header(
                 button {
                     class: "flex items-center gap-1 uppercase tracking-widest text-left hover:text-white transition-colors",
                     onclick: move |_| {
-                        if sort_state.is_some() {
-                            showcase::toggle_sort_state(sort_state.unwrap(), SortField::Artist);
+                        if let Some(sort_state) = sort_state {
+                            showcase::toggle_sort_state(sort_state, SortField::Artist);
                         }
                     },
                     "{i18n::t(\"artist\")}"
@@ -93,8 +90,8 @@ pub fn Header(
                     button {
                         class: "flex items-center gap-1 uppercase tracking-widest text-left hover:text-white transition-colors",
                         onclick: move |_| {
-                            if sort_state.is_some() {
-                                showcase::toggle_sort_state(sort_state.unwrap(), SortField::Album);
+                            if let Some(sort_state) = sort_state {
+                                showcase::toggle_sort_state(sort_state, SortField::Album);
                             }
                         },
                         "{i18n::t(\"album\")}"
@@ -104,8 +101,8 @@ pub fn Header(
                 button {
                     class: "flex items-center justify-end gap-1 uppercase tracking-widest text-right hover:text-white transition-colors",
                     onclick: move |_| {
-                        if sort_state.is_some() {
-                            showcase::toggle_sort_state(sort_state.unwrap(), SortField::Duration);
+                        if let Some(sort_state) = sort_state {
+                            showcase::toggle_sort_state(sort_state, SortField::Duration);
                         }
                     },
                     i { class: "fa-regular fa-clock" }
@@ -118,7 +115,7 @@ pub fn Header(
         rsx! {
             div { class: "flex items-center mb-2",
                   div {
-                      class: "grid flex-1 gap-6 px-2 py-2 border-b border-white/10 text-sm font-medium text-white/50 uppercase tracking-wider items-center",
+                      class: if cfg!(target_os = "android") { "grid flex-1 gap-2 px-2 py-2 border-b border-white/10 text-sm font-medium text-white/50 uppercase tracking-wider items-center" } else { "grid flex-1 gap-6 px-2 py-2 border-b border-white/10 text-sm font-medium text-white/50 uppercase tracking-wider items-center" },
                       style: "grid-template-columns: {columns_normal};",
                       div { class: "flex justify-center items-center h-6 shrink-0",
                             if is_selection_mode {
@@ -145,8 +142,8 @@ pub fn Header(
                       button {
                           class: "flex items-center gap-1 uppercase tracking-wider text-left hover:text-white transition-colors",
                           onclick: move |_| {
-                              if sort_state.is_some() {
-                                  showcase::toggle_sort_state(sort_state.unwrap(), SortField::Title);
+                              if let Some(sort_state) = sort_state {
+                                  showcase::toggle_sort_state(sort_state, SortField::Title);
                               }
                           },
                           "{i18n::t(\"title\")}"
@@ -155,8 +152,8 @@ pub fn Header(
                       button {
                           class: "flex items-center gap-1 uppercase tracking-wider text-left hover:text-white transition-colors",
                           onclick: move |_| {
-                              if sort_state.is_some() {
-                                  showcase::toggle_sort_state(sort_state.unwrap(), SortField::Artist);
+                              if let Some(sort_state) = sort_state {
+                                  showcase::toggle_sort_state(sort_state, SortField::Artist);
                               }
                           },
                           "{i18n::t(\"artist\")}"
@@ -166,8 +163,8 @@ pub fn Header(
                           button {
                               class: "flex items-center gap-1 uppercase tracking-wider text-left hover:text-white transition-colors",
                               onclick: move |_| {
-                                  if sort_state.is_some() {
-                                      showcase::toggle_sort_state(sort_state.unwrap(), SortField::Album);
+                                  if let Some(sort_state) = sort_state {
+                                      showcase::toggle_sort_state(sort_state, SortField::Album);
                                   }
                               },
                               "{i18n::t(\"album\")}"
@@ -177,8 +174,8 @@ pub fn Header(
                       button {
                           class: "flex items-center justify-end gap-1 uppercase tracking-wider text-right hover:text-white transition-colors",
                           onclick: move |_| {
-                              if sort_state.is_some() {
-                                  showcase::toggle_sort_state(sort_state.unwrap(), SortField::Duration);
+                              if let Some(sort_state) = sort_state {
+                                  showcase::toggle_sort_state(sort_state, SortField::Duration);
                               }
                           },
                           i { class: "fa-regular fa-clock" }

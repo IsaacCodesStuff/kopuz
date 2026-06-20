@@ -5,7 +5,7 @@ use hooks::use_player_controller::PlayerController;
 use crate::NavigationController;
 use crate::constants::{COLUMNS_MODERN, COLUMNS_MODERN_ALBUM};
 use crate::header::Header;
-use crate::showcase::{self, ShowcaseProps, SortField};
+use crate::showcase::{self, ShowcaseProps};
 use crate::track_row::TrackRow;
 use std::collections::HashSet;
 
@@ -13,13 +13,16 @@ use std::collections::HashSet;
 pub fn ShowcaseModern(props: ShowcaseProps) -> Element {
     let mut ctrl = use_context::<PlayerController>();
     let config = use_context::<Signal<AppConfig>>();
-    let nav_ctrl = use_context::<NavigationController>();
+    let _nav_ctrl = use_context::<NavigationController>();
 
     let total_seconds: u64 = props.tracks.iter().map(|t| t.duration).sum();
     let duration_min = total_seconds / 60;
 
     let offline_tracks = config.read().offline_tracks.clone();
-    let fmt_dur = |s: u64| format!("{}:{:02}", s / 60, s % 60);
+    // Per-track cover resolver (source dispatch + local-album lookup live in the
+    // source layer; no partition decision here).
+    let cover_for = hooks::use_db_queries::use_cover_resolver(64);
+    let _fmt_dur = |s: u64| format!("{}:{:02}", s / 60, s % 60);
     let sort_state = use_signal(|| None);
     let indexed_tracks: Vec<_> = props
         .tracks
@@ -34,6 +37,7 @@ pub fn ShowcaseModern(props: ShowcaseProps) -> Element {
         .map(|(track, _)| track.clone())
         .collect();
     let tracks_for_shuffle = sorted_tracks.clone();
+    let sorted_tracks_arc = std::sync::Arc::new(sorted_tracks.clone());
 
     let has_multiple_discs = sorted_tracks
         .iter()
@@ -41,12 +45,9 @@ pub fn ShowcaseModern(props: ShowcaseProps) -> Element {
         .collect::<HashSet<_>>()
         .len()
         > 1;
-    let mut last_disc = None;
-    let mut last_disc_size = 0;
-
     let currently_playing_path = {
         let idx = *ctrl.current_queue_index.read();
-        ctrl.get_track_at(idx).map(|track| track.path.clone())
+        ctrl.get_track_at(idx).map(|track| track.id.clone())
     };
 
     let current_song_title = ctrl.current_song_title.read().clone();
@@ -56,20 +57,40 @@ pub fn ShowcaseModern(props: ShowcaseProps) -> Element {
     let tracks_for_play_all = sorted_tracks.clone();
     let selected_queue_tracks: Vec<_> = sorted_tracks
         .iter()
-        .filter(|track| props.selected_tracks.contains(&track.path))
+        .filter(|track| props.selected_tracks.contains(&track.id))
         .cloned()
         .collect();
+    let selected_queue_tracks_arc = std::sync::Arc::new(selected_queue_tracks.clone());
+
+    let scroll_stat = use_signal(|| 0.0_f64);
+    let container_height = use_signal(|| 0.0_f64);
+    const ITEM_HEIGHT: f64 = 56.0;
+
+    let scroll_info = crate::virtual_scroll::use_virtual_scroll(
+        *scroll_stat.read(),
+        *container_height.read(),
+        sorted_track_pairs.len(),
+        ITEM_HEIGHT,
+    );
+
+    let mut last_disc = None;
+    let mut last_disc_size = 0;
+    for (display_idx, (track, _)) in sorted_track_pairs
+        .iter()
+        .enumerate()
+        .take(scroll_info.start_index)
+    {
+        if track.disc_number != last_disc && sort_state.peek().is_none() && props.is_album {
+            last_disc = track.disc_number;
+            last_disc_size = display_idx;
+        }
+    }
 
     rsx! {
-        div { class: "w-full max-w-[1600px] mx-auto select-none pb-8",
-
-            div { class: "flex items-end gap-6 mb-8 px-6 pt-6",
+        div { class: "w-full max-w-[1600px] mx-auto select-none flex-1 min-h-0 flex flex-col",
+            div { class: "flex items-end gap-6 mb-8 px-6 pt-6 shrink-0",
                 div {
-                    class: if props.on_cover_click.is_some() {
-                        "w-44 h-44 rounded-2xl overflow-hidden shrink-0 shadow-2xl bg-white/5 cursor-pointer"
-                    } else {
-                        "w-44 h-44 rounded-2xl overflow-hidden shrink-0 shadow-2xl bg-white/5"
-                    },
+                    class: if props.on_cover_click.is_some() { "w-44 h-44 rounded-2xl overflow-hidden shrink-0 shadow-2xl bg-white/5 cursor-pointer" } else { "w-44 h-44 rounded-2xl overflow-hidden shrink-0 shadow-2xl bg-white/5" },
                     style: "box-shadow: 0 20px 60px rgba(0,0,0,0.6);",
                     onclick: move |_| {
                         if let Some(ref h) = props.on_cover_click {
@@ -83,29 +104,41 @@ pub fn ShowcaseModern(props: ShowcaseProps) -> Element {
                         }
                     } else {
                         div { class: "w-full h-full flex items-center justify-center",
-                            i { class: "fa-solid fa-music text-4xl", style: "color: var(--color-white); opacity: 0.15;" }
+                            i {
+                                class: "fa-solid fa-music text-4xl",
+                                style: "color: var(--color-white); opacity: 0.15;",
+                            }
                         }
                     }
                 }
 
                 div { class: "flex flex-col gap-1 pb-1 min-w-0",
                     if !props.description.is_empty() {
-                        p {
-                            class: "text-xs font-bold tracking-widest uppercase mb-1",
-                            style: "color: var(--color-white); opacity: 0.35;",
-                            "{props.description}"
+                        if let Some(on_description_click) = props.on_description_click {
+                            button {
+                                class: "text-xs font-bold tracking-widest uppercase mb-1 text-left cursor-pointer hover:underline transition-colors",
+                                style: "color: var(--color-white); opacity: 0.45;",
+                                onclick: move |_| on_description_click.call(()),
+                                "{props.description}"
+                            }
+                        } else {
+                            p {
+                                class: "text-xs font-bold tracking-widest uppercase mb-1",
+                                style: "color: var(--color-white); opacity: 0.35;",
+                                "{props.description}"
+                            }
                         }
                     }
-                    h1 {
-                        class: "text-4xl font-bold text-white truncate mb-1",
-                        "{props.name}"
-                    }
+                    h1 { class: "text-4xl font-bold text-white truncate mb-1", "{props.name}" }
                     p {
                         class: "text-sm mb-3",
                         style: "color: var(--color-white); opacity: 0.45;",
                         {
                             let count = props.tracks.len();
-                            let song_text = i18n::t_with("showcase_song_count", &[("count", count.to_string())]);
+                            let song_text = i18n::t_with(
+                                "showcase_song_count",
+                                &[("count", count.to_string())],
+                            );
                             rsx! { "{song_text} · {duration_min} {i18n::t(\"min\")}" }
                         }
                     }
@@ -128,11 +161,7 @@ pub fn ShowcaseModern(props: ShowcaseProps) -> Element {
                             }
                             button {
                                 class: "inline-flex items-center justify-center gap-2 h-9 px-5 rounded-full text-sm font-semibold text-white transition-opacity hover:opacity-90 active:scale-95",
-                                style: if *ctrl.shuffle.read() {
-                                    "background: var(--color-indigo-500);"
-                                } else {
-                                    "background: color-mix(in oklab, var(--color-indigo-500) 25%, transparent); border: 1px solid color-mix(in oklab, var(--color-indigo-500) 40%, transparent);"
-                                },
+                                style: if *ctrl.shuffle.read() { "background: var(--color-indigo-500);" } else { "background: color-mix(in oklab, var(--color-indigo-500) 25%, transparent); border: 1px solid color-mix(in oklab, var(--color-indigo-500) 40%, transparent);" },
                                 onclick: move |_| {
                                     ctrl.toggle_shuffle();
                                     ctrl.play_queue_shuffled(tracks_for_shuffle.clone());
@@ -147,8 +176,12 @@ pub fn ShowcaseModern(props: ShowcaseProps) -> Element {
                                     disabled: props.is_downloading_all,
                                     onclick: move |_| {
                                         if props.on_delete_all.is_some() {
-                                            if let Some(ref h) = props.on_delete_all { h.call(()); }
-                                        } else if let Some(ref h) = props.on_download_all { h.call(()); }
+                                            if let Some(ref h) = props.on_delete_all {
+                                                h.call(());
+                                            }
+                                        } else if let Some(ref h) = props.on_download_all {
+                                            h.call(());
+                                        }
                                     },
                                     if props.is_downloading_all {
                                         i { class: "fa-solid fa-spinner fa-spin text-xs" }
@@ -167,170 +200,164 @@ pub fn ShowcaseModern(props: ShowcaseProps) -> Element {
 
             if props.tracks.is_empty() {
                 div { class: "flex flex-col items-center justify-center py-16 gap-3",
-                    i { class: "fa-regular fa-folder-open text-4xl", style: "color: var(--color-white); opacity: 0.15;" }
-                    p { class: "text-sm", style: "color: var(--color-white); opacity: 0.3;", "{i18n::t(\"no_songs_here\")}" }
+                    i {
+                        class: "fa-regular fa-folder-open text-4xl",
+                        style: "color: var(--color-white); opacity: 0.15;",
+                    }
+                    p {
+                        class: "text-sm",
+                        style: "color: var(--color-white); opacity: 0.3;",
+                        "{i18n::t(\"no_songs_here\")}"
+                    }
                 }
             } else {
-                Header{
-                    is_modern: true,
-                    is_album: props.is_album,
-                    is_selection_mode: props.is_selection_mode,
-                    on_select_all: props.on_select_all,
-                    all_selected: props.all_selected,
-                    sort_state: sort_state
+                div { class: "shrink-0",
+                    Header {
+                        is_modern: true,
+                        is_album: props.is_album,
+                        is_selection_mode: props.is_selection_mode,
+                        on_select_all: props.on_select_all,
+                        all_selected: props.all_selected,
+                        sort_state,
+                    }
                 }
 
-                for (display_idx, (track, idx)) in sorted_track_pairs.iter().enumerate() {
-                    {
-                        let idx = *idx;
-                        let matches_current_path = currently_playing_path.as_ref() == Some(&track.path);
-                        let matches_current_metadata = currently_playing_path.is_none()
-                            && !current_song_title.is_empty()
-                            && track.title == current_song_title
-                            && track.artist == current_song_artist
-                            && track.album == current_song_album
-                            && track.duration == current_song_duration;
-                        let is_currently_playing: bool = matches_current_path || matches_current_metadata;
-                        let is_selected = props.is_selection_mode && props.selected_tracks.contains(&track.path);
-                        let selection_shadow = if is_selected {
-                            "inset 0 0 0 9999px color: var(--color-white); opacity: 0.07;"
-                        } else {
-                            "none"
-                        };
-                        let track_dur = fmt_dur(track.duration);
-                        let artist = track.artist.clone();
-                        let album = track.album.clone();
-                        let album_id = track.album_id.clone();
-                        let row_num = display_idx + 1;
-
-
-                        let path_str = track.path.to_string_lossy();
-                        let item_id_str: String = path_str.split(':').nth(1).unwrap_or(&path_str).to_string();
-                        let is_downloaded = if let Some(path_str) = offline_tracks.get(&item_id_str) {
-                            std::path::Path::new(path_str).exists()
-                        } else {
-                            false
-                        };
-                        let is_downloading = false;
-                        let play_queue = sorted_tracks.clone();
-                        let play_queue_button = sorted_tracks.clone();
-
-                        let cover_url: Option<utils::CoverUrl> = {
-                            let path_str = track.path.to_string_lossy();
-                            if path_str.starts_with("jellyfin:") {
-                                let conf = config.read();
-                                conf.server.as_ref().and_then(|s| {
-                                    utils::jellyfin_image::track_cover_url_with_album_fallback(
-                                        &path_str,
-                                        &track.album_id,
-                                        &s.url,
-                                        s.access_token.as_deref(),
-                                        64,
-                                        90,
-                                    ).map(|u| std::sync::Arc::from(u.as_str()))
-                                })
-                            } else {
-                                let lib = props.library.read();
-                                lib.albums
-                                    .iter()
-                                    .find(|a| a.id == track.album_id)
-                                    .and_then(|a| utils::format_artwork_url(a.cover_path.as_ref()))
-                            }
-                        };
-
-                        let mut is_new_disc = false;
-                        if track.disc_number != last_disc && sort_state.peek().is_none() && props.is_album {
-                            last_disc = track.disc_number;
-                            is_new_disc = true;
-                            last_disc_size = display_idx;
-                        }
-
-                        let columns = if props.is_album {
-                            COLUMNS_MODERN_ALBUM
-                        } else {
-                            COLUMNS_MODERN
-                        };
-
-                        rsx! {
-                            div {
-                                class: "flex items-center group",
-                                if has_multiple_discs && props.is_album && is_new_disc && sort_state.peek().is_none() {
-                                    div {
-                                        class: "flex-1 min-w-0",
-                                        div {
-                                            class: "grid items-center p-2 rounded-lg hover:bg-white/5 group transition-colors relative select-none",
-                                            style: format!("grid-template-columns: {columns};"),
-                                            i { class: "fa-solid fa-compact-disc" }
-                                            p { "Disc {track.disc_number.unwrap_or(1)}" }
+                div { class: "flex-1 min-h-0 w-full flex flex-col overflow-hidden",
+                    crate::virtual_scroll::VirtualScrollView {
+                        id: "modern-showcase-scroll".to_string(),
+                        class: "flex-1 min-h-0 overflow-y-auto pb-20".to_string(),
+                        scroll_stat,
+                        container_height,
+                        item_height: ITEM_HEIGHT,
+                        saved_scroll: 0.0,
+                        top_pad: scroll_info.top_pad,
+                        bottom_pad: scroll_info.bottom_pad,
+                        for (display_idx, (track, idx)) in sorted_track_pairs
+                            .iter()
+                            .enumerate()
+                            .skip(scroll_info.start_index)
+                            .take(scroll_info.items_to_render)
+                        {
+                            {
+                                let idx = *idx;
+                                let matches_current_path = currently_playing_path.as_ref() == Some(&track.id);
+                                let matches_current_metadata = currently_playing_path.is_none()
+                                    && !current_song_title.is_empty()
+                                    && track.title == current_song_title
+                                    && track.artist == current_song_artist
+                                    && track.album == current_song_album
+                                    && track.duration == current_song_duration;
+                                let is_currently_playing: bool = matches_current_path
+                                    || matches_current_metadata;
+                                let is_selected = props.is_selection_mode
+                                    && props.selected_tracks.contains(&track.id);
+                                let path_str = track.id.uid();
+                                let item_id_str: String = path_str
+                                    .split(':')
+                                    .nth(1)
+                                    .unwrap_or(&path_str)
+                                    .to_string();
+                                let is_downloaded = if let Some(path_str) = offline_tracks.get(&item_id_str) {
+                                    std::path::Path::new(path_str).exists()
+                                }
+                                else {
+                                    false
+                                };
+                                let is_downloading = false;
+                                let play_queue = std::sync::Arc::clone(&sorted_tracks_arc);
+                                let cover_url: Option<utils::CoverUrl> =
+                                    cover_for(track).or_else(|| Some(utils::default_cover_url()));
+                                let mut is_new_disc = false;
+                                if track.disc_number != last_disc && sort_state.peek().is_none()
+                                    && props.is_album
+                                {
+                                    last_disc = track.disc_number;
+                                    is_new_disc = true;
+                                    last_disc_size = display_idx;
+                                }
+                                let columns = if props.is_album { COLUMNS_MODERN_ALBUM } else { COLUMNS_MODERN };
+                                rsx! {
+                                    div { key: "{track.id.uid()}", class: "contents",
+                                    div { class: "flex items-center group",
+                                        if has_multiple_discs && props.is_album && is_new_disc && sort_state.peek().is_none() {
+                                            div { class: "flex-1 min-w-0",
+                                                div {
+                                                    class: "grid items-center p-2 rounded-lg hover:bg-white/5 group transition-colors relative select-none",
+                                                    style: format!("grid-template-columns: {columns};"),
+                                                    i { class: "fa-solid fa-compact-disc" }
+                                                    p { "Disc {track.disc_number.unwrap_or(1)}" }
+                                                }
+                                            }
                                         }
                                     }
-                                }
-                            }
-                            div {
-                                key: "{track.path.display()}",
-                                class: "flex items-center group",
-                                div { class: "flex-1 min-w-0",
-                                    TrackRow {
-                                        track: track.clone(),
-                                        cover_url: cover_url,
-                                        is_menu_open: props.active_track.as_ref() == Some(&track.path),
-                                        is_album: props.is_album,
-                                        is_selection_mode: props.is_selection_mode,
-                                        is_selected: is_selected,
-                                        is_downloaded: is_downloaded,
-                                        is_downloading: is_downloading,
-                                        is_currently_playing,
-                                        selected_queue_tracks: selected_queue_tracks.clone(),
-                                        row_num: Some(display_idx + 1 - last_disc_size),
-                                        on_select: move |selected| {
-                                            if let Some(handler) = &props.on_select {
-                                                handler.call((idx, selected));
+                                    div { class: "flex items-center group",
+                                        div { class: "flex-1 min-w-0",
+                                            TrackRow {
+                                                track: track.clone(),
+                                                on_start_radio: crate::track_row::radio_handler(track.clone()),
+                                                cover_url,
+                                                is_menu_open: props.active_track.as_ref() == Some(&track.id),
+                                                is_album: props.is_album,
+                                                is_selection_mode: props.is_selection_mode,
+                                                is_selected,
+                                                is_downloaded,
+                                                is_downloading,
+                                                is_currently_playing,
+                                                selected_queue_tracks: (*selected_queue_tracks_arc).clone(),
+                                                row_num: Some(display_idx + 1 - last_disc_size),
+                                                on_select: move |selected| {
+                                                    if let Some(handler) = &props.on_select {
+                                                        handler.call((idx, selected));
+                                                    }
+                                                },
+                                                on_long_press: move |_| {
+                                                    if let Some(handler) = &props.on_long_press {
+                                                        handler.call(idx);
+                                                    }
+                                                },
+                                                on_click_menu: move |_| {
+                                                    if let Some(handler) = &props.on_click_menu {
+                                                        handler.call(idx);
+                                                    }
+                                                },
+                                                on_add_to_playlist: move |_| {
+                                                    if let Some(handler) = &props.on_add_to_playlist {
+                                                        handler.call(idx);
+                                                    }
+                                                },
+                                                on_queue: move |_| {
+                                                    if let Some(handler) = &props.on_queue {
+                                                        handler.call(idx);
+                                                    }
+                                                },
+                                                on_close_menu: move |_| {
+                                                    if let Some(handler) = &props.on_close_menu {
+                                                        handler.call(());
+                                                    }
+                                                },
+                                                on_delete: move |_| {
+                                                    if let Some(handler) = &props.on_delete_track {
+                                                        handler.call(idx);
+                                                    }
+                                                },
+                                                on_remove_from_playlist: move |_| {
+                                                    if let Some(handler) = &props.on_remove_from_playlist {
+                                                        handler.call(idx);
+                                                    }
+                                                },
+                                                on_view_metadata: props.on_view_metadata.map(|h| EventHandler::new(move |_| h.call(idx))),
+                                                on_download: move |_| {
+                                                    if let Some(handler) = &props.on_download_track {
+                                                        handler.call(idx);
+                                                    }
+                                                },
+                                                on_play: move |_| {
+                                                    ctrl.queue.set((*play_queue).clone());
+                                                    ctrl.play_track(display_idx);
+                                                },
                                             }
-                                        },
-                                        on_long_press: move |_| {
-                                            if let Some(handler) = &props.on_long_press {
-                                                handler.call(idx);
-                                            }
-                                        },
-                                        on_click_menu: move |_| {
-                                            if let Some(handler) = &props.on_click_menu {
-                                                handler.call(idx);
-                                            }
-                                        },
-                                        on_add_to_playlist: move |_| {
-                                            if let Some(handler) = &props.on_add_to_playlist {
-                                                handler.call(idx);
-                                            }
-                                        },
-                                        on_queue: move |_| {
-                                            if let Some(handler) = &props.on_queue {
-                                                handler.call(idx);
-                                            }
-                                        },
-                                        on_close_menu: move |_| {
-                                            if let Some(handler) = &props.on_close_menu {
-                                                handler.call(());
-                                            }
-                                        },
-                                        on_delete: move |_| {
-                                            if let Some(handler) = &props.on_delete_track {
-                                                handler.call(idx);
-                                            }
-                                        },
-                                        on_remove_from_playlist: move |_| {
-                                            if let Some(handler) = &props.on_remove_from_playlist {
-                                                handler.call(idx);
-                                            }
-                                        },
-                                        on_download: move |_| {
-                                            if let Some(handler) = &props.on_download_track {
-                                                handler.call(idx);
-                                            }
-                                        },
-                                        on_play: move |_| {
-                                            ctrl.queue.set(play_queue.clone());
-                                            ctrl.play_track(display_idx);
                                         }
+                                    }
                                     }
                                 }
                             }

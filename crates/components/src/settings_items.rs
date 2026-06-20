@@ -4,8 +4,11 @@ use config::{
 };
 use dioxus::prelude::*;
 #[cfg(not(target_arch = "wasm32"))]
+#[cfg(all(not(target_arch = "wasm32"), not(target_os = "android")))]
 use rfd::AsyncFileDialog;
 use scrobble::lastfm;
+use scrobble::librefm;
+use tracing::Instrument;
 
 #[component]
 pub fn SettingItem(title: String, control: Element) -> Element {
@@ -134,7 +137,7 @@ pub fn MultiDirectoryPicker(
     }
 }
 
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(all(not(target_arch = "wasm32"), not(target_os = "android")))]
 #[component]
 fn AddFolderButton(on_add: EventHandler<std::path::PathBuf>, add_text: String) -> Element {
     rsx! {
@@ -145,6 +148,37 @@ fn AddFolderButton(on_add: EventHandler<std::path::PathBuf>, add_text: String) -
                         on_add.call(handle.path().to_path_buf());
                     }
                 });
+            },
+            class: "bg-white/10 hover:bg-white/20 px-3 py-1 rounded text-sm text-white transition-colors self-start",
+            "{add_text}"
+        }
+    }
+}
+
+// Android has no native folder dialog (rfd doesn't work), so request storage permission
+// and auto-detect the system Music directory via JNI, falling back to common paths.
+#[cfg(target_os = "android")]
+#[component]
+fn AddFolderButton(on_add: EventHandler<std::path::PathBuf>, add_text: String) -> Element {
+    rsx! {
+        button {
+            onclick: move |_| {
+                player::systemint::request_permissions();
+                let mut paths = Vec::new();
+                if let Some(android_music) = player::systemint::get_android_music_dir() {
+                    paths.push(std::path::PathBuf::from(android_music));
+                }
+                paths.push(std::path::PathBuf::from("/storage/emulated/0/Music"));
+                paths.push(std::path::PathBuf::from("/sdcard/Music"));
+                if let Ok(home) = std::env::var("HOME") {
+                    paths.push(std::path::PathBuf::from(home).join("Music"));
+                }
+                for path in paths {
+                    if path.exists() {
+                        on_add.call(path);
+                        break;
+                    }
+                }
             },
             class: "bg-white/10 hover:bg-white/20 px-3 py-1 rounded text-sm text-white transition-colors self-start",
             "{add_text}"
@@ -163,6 +197,11 @@ fn AddFolderButton(on_add: EventHandler<std::path::PathBuf>, add_text: String) -
 #[component]
 pub fn ServerSettings(
     active: Option<MusicServer>,
+    /// The active source's server id (`None` ⇒ Local) — the authoritative "which
+    /// server is active", reactive to the sidebar source switcher too. The
+    /// `active` snapshot (`config.server`) is only updated by the Settings switch
+    /// path, so keying the badge off it alone misses a switch made from the sidebar.
+    active_source_id: Option<String>,
     servers: Vec<SavedServer>,
     on_add: EventHandler<()>,
     on_delete: EventHandler<String>,
@@ -173,7 +212,6 @@ pub fn ServerSettings(
     let delete_text = i18n::t("delete");
     let switch_text = i18n::t("switch_to_server");
     let active_text = i18n::t("active_server");
-    let active_id = active.as_ref().and_then(|s| s.id.clone());
 
     rsx! {
         div { class: "flex flex-col gap-2 w-full",
@@ -183,10 +221,14 @@ pub fn ServerSettings(
             for srv in servers.iter().cloned() {
                 {
                     let id = srv.id.clone();
-                    let is_active = active_id.as_deref() == Some(srv.id.as_str());
+                    let is_active = active_source_id.as_deref() == Some(srv.id.as_str());
+                    // "Connected" only when the active server snapshot is actually
+                    // this server (and carries a token) — after a sidebar switch the
+                    // snapshot can lag, so don't claim a stale connection.
                     let connected = is_active
                         && active
                             .as_ref()
+                            .filter(|s| s.id.as_deref() == Some(srv.id.as_str()))
                             .and_then(|s| s.access_token.clone())
                             .is_some();
                     let id_switch = id.clone();
@@ -249,6 +291,47 @@ pub fn ServerSettings(
 
 #[component]
 pub fn DiscordPresenceSettings(enabled: bool, on_change: EventHandler<bool>) -> Element {
+    let slider_style = if enabled {
+        "inset-inline-start: 4px; width: calc(50% - 4px);"
+    } else {
+        "inset-inline-start: calc(50% + 2px); width: calc(50% - 4px);"
+    };
+
+    let enable_class = if enabled {
+        "text-white"
+    } else {
+        "text-slate-500 hover:text-slate-300"
+    };
+
+    let disable_class = if !enabled {
+        "text-white"
+    } else {
+        "text-slate-500 hover:text-slate-300"
+    };
+
+    rsx! {
+        div {
+            class: "bg-white/5 p-1 rounded-xl flex relative h-10 items-center border border-white/5 w-48",
+            div {
+                class: "absolute h-8 bg-white/10 rounded-lg transition-all duration-300 ease-out",
+                style: "{slider_style}"
+            }
+            button {
+                class: "flex-1 text-[11px] font-bold z-10 transition-colors duration-300 cursor-pointer {enable_class}",
+                onclick: move |_| on_change.call(true),
+                "{i18n::t(\"enabled\")}"
+            }
+            button {
+                class: "flex-1 text-[11px] font-bold z-10 transition-colors duration-300 cursor-pointer {disable_class}",
+                onclick: move |_| on_change.call(false),
+                "{i18n::t(\"disabled\")}"
+            }
+        }
+    }
+}
+
+#[component]
+pub fn DiscordPresencePausedSettings(enabled: bool, on_change: EventHandler<bool>) -> Element {
     let slider_style = if enabled {
         "inset-inline-start: 4px; width: calc(50% - 4px);"
     } else {
@@ -403,7 +486,7 @@ pub fn LastFmSettings(
                 onclick: move |_| {
                     let api_key = api_key_input();
                     let api_secret = api_secret_input();
-                    let on_session_key_save = on_session_key_save.clone();
+                    let on_session_key_save = on_session_key_save;
 
                     spawn(async move {
                         match lastfm::get_auth_token(&api_key).await {
@@ -437,13 +520,73 @@ pub fn LastFmSettings(
                                 tracing::warn!("Failed to get auth token: {}", e);
                             }
                         }
-                    });
+                    }.instrument(tracing::info_span!("lastfm.auth")));
                 },
 
                 if session_key.is_empty() || api_key_input.is_empty() || api_secret_input.is_empty() {
                     "{i18n::t(\"connect_to_lastfm\")}"
                 } else {
                     "{i18n::t(\"lastfm_connected\")}"
+                }
+            }
+        }
+    }
+}
+
+#[component]
+pub fn LibreFmSettings(session_key: String, on_session_key_save: EventHandler<String>) -> Element {
+    rsx! {
+        div {
+            class: "flex flex-col gap-3 w-full max-w-xl",
+            button {
+                class: "bg-white/10 hover:bg-white/20 px-5 py-2 rounded text-sm text-white transition-colors self-start mx-auto w-fit",
+                onclick: move |_| {
+                    let on_session_key_save = on_session_key_save;
+
+                    spawn(async move {
+                        match librefm::get_auth_token(librefm::API_KEY).await {
+                            Ok(token) => {
+                                let url = librefm::auth_url(librefm::API_KEY, &token);
+
+                                if let Err(e) = webbrowser::open(&url) {
+                                    tracing::warn!("Failed to open browser: {}", e);
+                                    return;
+                                }
+                                let mut connected = false;
+                                for _ in 0..30 {
+                                    match librefm::get_session_key(
+                                        librefm::API_KEY,
+                                        librefm::API_SECRET,
+                                        &token,
+                                    )
+                                    .await
+                                    {
+                                        Ok(session_key) => {
+                                            on_session_key_save.call(session_key);
+                                            tracing::info!("Libre.fm connected successfully");
+                                            connected = true;
+                                            break;
+                                        }
+                                        Err(_) => {
+                                            utils::sleep(std::time::Duration::from_secs(2)).await;
+                                        }
+                                    }
+                                }
+                                if !connected {
+                                    tracing::warn!("Timed out waiting for Libre.fm authorization");
+                                }
+                            }
+                            Err(e) => {
+                                tracing::warn!("Failed to get auth token: {}", e);
+                            }
+                        }
+                    });
+                },
+
+                if session_key.is_empty() {
+                    "{i18n::t(\"connect_to_librefm\")}"
+                } else {
+                    "{i18n::t(\"librefm_connected\")}"
                 }
             }
         }
