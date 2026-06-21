@@ -62,7 +62,7 @@ jobs:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
         with:
           persist-credentials: false
-      - uses: DeterminateSystems/nix-installer-action@main
+      - uses: DeterminateSystems/nix-installer-action@ef8a148080ab6020fd15196c2084a2eea5ff2d25 # v22
       - name: Check locale parity against en.ftl
         run: nix shell nixpkgs#nushell --command nu scripts/check_locales.nu
       - name: Check Rust i18n usage against en.ftl
@@ -120,7 +120,7 @@ jobs:
           cargo binstall -y cargo-xwin
       - name: Cache xwin MSVC SDK
         if: matrix.target == 'x86_64-pc-windows-msvc'
-        uses: actions/cache@v4
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
           path: ~/.cache/cargo-xwin
           key: xwin-${{ matrix.target }}
@@ -133,20 +133,23 @@ jobs:
         run: |
           cargo binstall -y cargo-zigbuild apple-codesign
           # cargo-zigbuild invokes zig via the `ziglang` Python module.
-          pip3 install ziglang
+          pip3 install ziglang==0.16.0
       - name: Cache macOS SDK
         if: matrix.target == 'aarch64-apple-darwin'
         id: macsdk
-        uses: actions/cache@v4
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
           path: ~/macsdk
           key: macsdk-14.0
       - name: Fetch macOS SDK
         if: matrix.target == 'aarch64-apple-darwin' && steps.macsdk.outputs.cache-hit != 'true'
+        env:
+          SDK_SHA256: 5e4d3be6b445f0eacc0333ff2117e93e4433d8c4fe44053a14f735033a98aaa9
         run: |
           mkdir -p "$HOME/macsdk"
           curl -fL --retry 3 -o /tmp/sdk.tar.xz \
             https://github.com/joseluisq/macosx-sdks/releases/download/14.0/MacOSX14.0.sdk.tar.xz
+          echo "$SDK_SHA256  /tmp/sdk.tar.xz" | sha256sum -c -
           tar -xf /tmp/sdk.tar.xz -C "$HOME/macsdk"
       - name: Configure macOS SDK env
         if: matrix.target == 'aarch64-apple-darwin'
