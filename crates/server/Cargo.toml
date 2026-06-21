@@ -20,13 +20,18 @@ md5 = "0.8"
 sha1 = "0.10"
 httpdate = "1"
 hex = "0.4"
-rookie = "0.5"
 web-time = { workspace = true }
 tokio = { workspace = true, features = ["fs", "process", "rt", "sync"] }
 reader = { workspace = true }
 db = { workspace = true }
 utils = { workspace = true }
 async-trait = "0.1"
+
+# Browser-cookie import. Not on Windows: rookie pulls `libesedb` (a bundled C
+# library) there, which can't cross-compile and is unusable anyway since
+# Chromium v20's App-Bound Encryption blocks non-admin cookie decryption.
+[target.'cfg(not(target_os = "windows"))'.dependencies]
+rookie = "0.5"
 
 [[example]]
 name = "duration_probe"
