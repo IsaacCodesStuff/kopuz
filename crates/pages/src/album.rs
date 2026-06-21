@@ -12,7 +12,6 @@ use hooks::db_reactivity::Table;
 use hooks::use_db_queries::{
     use_active_source, use_album, use_album_tracks, use_albums, use_tracks_by_keys,
 };
-use server::source::TrackFavorite;
 use std::collections::HashSet;
 use std::path::PathBuf;
 
@@ -736,8 +735,13 @@ fn YtAlbumDetail(
     let artist_name = artist;
     let artist_for_nav = artist_name.clone();
 
-    // Current track for the row highlight (id match against the live queue).
-    let current_id = ctrl.current_track().map(|t| t.id);
+    // Current track for the row highlight. Read `current_queue_index`
+    // *reactively* (`current_track()` peeks, so the page wouldn't re-render on a
+    // skip) so the highlighted row follows next/prev.
+    let current_id = {
+        let idx = *ctrl.current_queue_index.read();
+        ctrl.get_track_at(idx).map(|t| t.id)
+    };
     let offline_tracks = config.read().offline_tracks.clone();
 
     // Whether every album track is downloaded for offline — drives the download
@@ -751,33 +755,9 @@ fn YtAlbumDetail(
                 .unwrap_or(false)
         });
 
-    // "Saved" = every track favorited (YT Music's album-save has no direct
-    // analog here; the closest truth is the per-track like the heart already
-    // toggles). Re-checked on any favorites bump.
-    let album_saved = {
-        let tracks = tracks.clone();
-        use_resource(move || {
-            let _ = gens.generation(Table::Favorites);
-            let src = active_source.read().clone();
-            let tracks = tracks.clone();
-            async move {
-                if tracks.is_empty() {
-                    return false;
-                }
-                for t in &tracks {
-                    if !t.is_favorite(&src).await {
-                        return false;
-                    }
-                }
-                true
-            }
-        })
-    };
-    let is_saved = album_saved.read().clone().unwrap_or(false);
-
     let tracks_play_all = tracks.clone();
     let tracks_download_all = tracks.clone();
-    let tracks_save = tracks.clone();
+    let artist_for_nav_btn = artist_name.clone();
     // Share target: the album's YT browse link when resolved, else the first
     // track's web url so the button still does something before the fetch lands.
     let share_url = browse_id
@@ -852,29 +832,12 @@ fn YtAlbumDetail(
                             },
                             i { class: if all_downloaded { "fa-solid fa-trash" } else { "fa-solid fa-download" } }
                         }
-                        // Save (favorite all tracks).
+                        // Go to artist.
                         button {
-                            class: format!("w-11 h-11 rounded-full border flex items-center justify-center transition-colors {}", if is_saved { "text-indigo-400 border-indigo-400/40 bg-indigo-500/10" } else { "text-slate-300 border-white/15 hover:text-white hover:border-white/30" }),
-                            title: if is_saved { "Saved".to_string() } else { i18n::t("save").to_string() },
-                            onclick: move |_| {
-                                let want = !is_saved;
-                                let tracks = tracks_save.clone();
-                                let src = active_source.peek().clone();
-                                spawn(async move {
-                                    for t in &tracks {
-                                        if want {
-                                            let _ = src.upsert_tracks(std::slice::from_ref(t)).await;
-                                        }
-                                        let _ = t.set_favorite(&src, want).await;
-                                    }
-                                    gens.bump(Table::Favorites);
-                                    gens.bump(Table::Tracks);
-                                    if src.capabilities().sync {
-                                        hooks::use_sync_task::nudge();
-                                    }
-                                });
-                            },
-                            i { class: if is_saved { "fa-solid fa-bookmark" } else { "fa-regular fa-bookmark" } }
+                            class: "w-11 h-11 rounded-full border border-white/15 flex items-center justify-center text-slate-300 hover:text-white hover:border-white/30 transition-colors",
+                            title: "Go to artist".to_string(),
+                            onclick: move |_| nav_ctrl.navigate_to_artist(artist_for_nav_btn.clone()),
+                            i { class: "fa-solid fa-user" }
                         }
                         // Play (primary).
                         button {
